@@ -6,7 +6,7 @@ export const formatResponse = (response: IResponse) => {
     throw new HttpException(
       {
         message: response.message,
-        data: null,
+        data: response.data || response.data === false ? response.data : null,
         error: response.error,
       },
       response.statusCode,

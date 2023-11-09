@@ -1,31 +1,21 @@
 import {
   IsDateString,
-  IsEmail,
-  IsNotEmpty,
   IsOptional,
   IsString,
   Matches,
   MinLength,
 } from 'class-validator';
 
-export class CreatePrimaryUserDto {
-  @IsNotEmpty()
-  @IsEmail()
-  email: string;
-
-  @IsNotEmpty()
+export class UpdatePrimaryUserDto {
+  @IsOptional()
   @IsString()
   phone: string;
 
-  @IsNotEmpty()
-  @IsString()
-  userName: string;
-
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   fullName: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   @MinLength(6)
   @Matches(/(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])/, {
@@ -36,23 +26,21 @@ export class CreatePrimaryUserDto {
 
   @IsOptional()
   @IsString()
-  placeInFamily: string;
-
-  @IsNotEmpty()
-  @IsString()
   gender: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsDateString()
   dob: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  country: string;
+  address: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  state: string;
+  profession: string;
 
-  profilePic: Express.Multer.File;
+  @IsOptional()
+  @IsString()
+  about: string;
 }

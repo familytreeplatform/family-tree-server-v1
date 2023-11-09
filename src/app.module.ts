@@ -13,22 +13,21 @@ import { MongooseModule } from '@nestjs/mongoose';
 import {
   PrimaryUser,
   PrimaryUserSchema,
-  PrimaryUserProfile,
-  PrimaryUserProfileSchema,
 } from './users/schemas';
 import { PrimaryUserController } from './users/controllers';
+import { FamilyModule } from './family/family.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     MongooseModule.forFeature([
       { name: PrimaryUser.name, schema: PrimaryUserSchema },
-      { name: PrimaryUserProfile.name, schema: PrimaryUserProfileSchema },
     ]),
     ThrottlerModule.forRoot(),
     AuthModule,
     DatabaseModule,
     UsersModule,
+    FamilyModule,
   ],
   controllers: [AppController, PrimaryUserController],
   providers: [

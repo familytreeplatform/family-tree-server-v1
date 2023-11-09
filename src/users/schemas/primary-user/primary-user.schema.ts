@@ -1,6 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Types } from 'mongoose';
-import { PrimaryUserProfile } from './profile';
+import { HydratedDocument } from 'mongoose';
 
 export type PrimaryUserDocument = HydratedDocument<PrimaryUser>;
 
@@ -21,11 +20,11 @@ export class PrimaryUser {
   @Prop({ required: true })
   password: string;
 
-  @Prop({ type: { type: Types.ObjectId, ref: 'PrimaryUserProfile' } })
-  profile: PrimaryUserProfile;
-
   @Prop()
   secretToken: string;
+
+  @Prop()
+  profilePic: string;
 
   @Prop({ default: 'primaryuser' })
   role: string;
