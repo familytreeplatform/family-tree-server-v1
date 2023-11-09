@@ -1,15 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import {
-  PrimaryUser,
-  PrimaryUserDocument,
-  PrimaryUserProfile,
-  PrimaryUserProfileDocument,
-} from '../schemas';
+import { PrimaryUser, PrimaryUserDocument } from '../schemas';
 import { Model } from 'mongoose';
 import * as argon2 from 'argon2';
 import { IResponse } from 'src/interfaces';
-import { CreatePrimaryUserDto } from '../dto';
+import {
+  CreatePrimaryUserDto,
+  UpdatePrimaryUserDto,
+  searchUserDto,
+} from '../dto';
 import { welcomeMail } from 'src/templates/mails';
 
 @Injectable()
@@ -18,8 +17,6 @@ export class PrimaryUserService {
   constructor(
     @InjectModel(PrimaryUser.name)
     private primaryUser: Model<PrimaryUserDocument>,
-    @InjectModel(PrimaryUserProfile.name)
-    private primaryUserProfile: Model<PrimaryUserProfileDocument>,
   ) {}
 
   async findUserByEmail(email: string): Promise<IResponse> {
@@ -72,9 +69,7 @@ export class PrimaryUserService {
     let response: IResponse;
 
     try {
-      const user = await this.primaryUser
-        .findOne({ _id: userId })
-        .populate(['profile']);
+      const user = await this.primaryUser.findOne({ _id: userId });
 
       if (!user) {
         return (response = {
@@ -109,6 +104,61 @@ export class PrimaryUserService {
         data: null,
         error: {
           code: 'user_by_id_fetch_failed',
+          message:
+            `an unexpected error occurred while processing the request: error ` +
+            JSON.stringify(err, null, 2),
+        },
+      });
+    }
+  }
+
+  async searchUser(searchUserDto: searchUserDto) {
+    let response: IResponse;
+
+    try {
+      const user = await this.primaryUser.find({
+        $or: [
+          { email: searchUserDto.email },
+          { userName: searchUserDto.userName },
+        ],
+      });
+
+      const key = searchUserDto.email ? 'email' : 'username';
+      const value = searchUserDto.email
+        ? searchUserDto.email
+        : searchUserDto.userName;
+
+      if (user.length === 0) {
+        return (response = {
+          statusCode: 404,
+          message: `no user found with this ${key}`,
+          data: null,
+          error: {
+            code: 'user_not_found',
+            message: `user with ${key}: ${value} not found`,
+          },
+        });
+      }
+
+      return (response = {
+        statusCode: 200,
+        message: `user with ${key}: ${value} retrived successfully`,
+        data: user[0],
+        error: null,
+      });
+    } catch (err) {
+      console.log(err);
+
+      this.logger.error(
+        `an error occur searching user` + JSON.stringify(err, null, 2),
+      );
+
+      return (response = {
+        statusCode: 400,
+        message: `error searching user`,
+        data: null,
+        error: {
+          code: 'user_search_failed',
           message:
             `an unexpected error occurred while processing the request: error ` +
             JSON.stringify(err, null, 2),
@@ -173,10 +223,92 @@ export class PrimaryUserService {
     }
   }
 
-  async validateUserName(userName: string): Promise<Boolean> {
-    const isValidUserName = await this.primaryUser.findOne({ userName });
+  async updateUser(userId: any, updatePrimaryUserDto: UpdatePrimaryUserDto) {
+    let response: IResponse;
 
-    if (!isValidUserName) return true;
-    return false;
+    try {
+      const user = await this.getUserById(userId);
+      if (!user.data || user.data === null) {
+        return (response = user);
+      }
+
+      if (updatePrimaryUserDto.password) {
+        updatePrimaryUserDto.password = await argon2.hash(
+          updatePrimaryUserDto.password,
+        );
+      }
+
+      const updated = await this.primaryUser.findOneAndUpdate(
+        { _id: userId },
+        { $set: updatePrimaryUserDto },
+        { new: true },
+      );
+
+      updated.password = null;
+      return (response = {
+        statusCode: 200,
+        message: 'user updated successfully',
+        data: updated,
+        error: null,
+      });
+    } catch (err) {
+      console.log(err);
+
+      this.logger.error(`error updating user: ` + JSON.stringify(err, null, 2));
+
+      return (response = {
+        statusCode: 400,
+        message: 'user update failed',
+        data: null,
+        error: {
+          code: 'user_update_failed',
+          message:
+            `an unexpected error occurred while processing the request: error ` +
+            JSON.stringify(err, null, 2),
+        },
+      });
+    }
+  }
+
+  async validateUserName(userName: string): Promise<IResponse> {
+    let response: IResponse;
+
+    try {
+      const isValidUserName = await this.primaryUser.findOne({ userName });
+
+      if (!isValidUserName) {
+        return (response = {
+          statusCode: 200,
+          message: `username valid`,
+          data: true,
+          error: null,
+        });
+      }
+      return (response = {
+        statusCode: 409,
+        message: `a user with this username already exist`,
+        data: false,
+        error: null,
+      });
+    } catch (err) {
+      console.log(err);
+
+      this.logger.error(
+        `an error occur while verifying username: [${userName}]` +
+          JSON.stringify(err, null, 2),
+      );
+
+      return (response = {
+        statusCode: 400,
+        message: `error validating username: [${userName}]`,
+        data: null,
+        error: {
+          code: 'username_verify_failed',
+          message:
+            `an unexpected error occurred while processing the request: error ` +
+            JSON.stringify(err, null, 2),
+        },
+      });
+    }
   }
 }

@@ -6,8 +6,6 @@ import { MongooseModule } from '@nestjs/mongoose';
 import {
   PrimaryUser,
   PrimaryUserSchema,
-  PrimaryUserProfile,
-  PrimaryUserProfileSchema,
 } from 'src/users/schemas';
 import { PrimaryUserService } from 'src/users/services';
 import { JwtStrategy } from './strategies';
@@ -17,7 +15,6 @@ import { JwtStrategy } from './strategies';
     JwtModule.register({}),
     MongooseModule.forFeature([
       { name: PrimaryUser.name, schema: PrimaryUserSchema },
-      { name: PrimaryUserProfile.name, schema: PrimaryUserProfileSchema },
     ]),
   ],
   providers: [AuthService, PrimaryUserService, JwtStrategy],
