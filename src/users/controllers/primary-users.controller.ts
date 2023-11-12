@@ -31,7 +31,7 @@ export class PrimaryUserController {
     if (!usernName)
       throw new HttpException(
         {
-          message: 'a valid username is required for verification',
+          message: 'username field is required for verification',
           data: null,
           statusCode: 400,
 

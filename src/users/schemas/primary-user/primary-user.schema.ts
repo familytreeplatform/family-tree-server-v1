@@ -24,6 +24,9 @@ export class PrimaryUser {
   secretToken: string;
 
   @Prop()
+  secretTokenExpiration: string;
+
+  @Prop()
   profilePic: string;
 
   @Prop({ default: 'primaryuser' })
