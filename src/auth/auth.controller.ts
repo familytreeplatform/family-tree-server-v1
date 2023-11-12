@@ -1,4 +1,11 @@
-import { Body, Controller, HttpCode, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpException,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { DefaultSignInDto, ForgotPasswordDto, PasswordResetDto } from './dto';
 import { formatResponse } from 'src/common/utils/response-formatter';
@@ -34,5 +41,26 @@ export class AuthController {
   @HttpCode(200)
   async resendOtp(@Body() forgotPasswordDto: ForgotPasswordDto) {
     return this.authService.resendOtp(forgotPasswordDto);
+  }
+
+  @Post('validate-otp')
+  @HttpCode(200)
+  async validateOtp(@Body('otp') otp: string) {
+    if (!otp)
+      throw new HttpException(
+        {
+          message: 'otp field is required',
+          data: null,
+          statusCode: 400,
+
+          error: {
+            code: 'otp_field_missing',
+            message: `otp field is required for this action`,
+          },
+        },
+        400,
+      );
+    const otpValidateResponse = await this.authService.validateOtp(otp);
+    return formatResponse(otpValidateResponse);
   }
 }

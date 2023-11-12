@@ -87,13 +87,22 @@ export class AuthService {
         });
 
       const otp = getRandomDigits(6);
+      const secretTokenExpiration = HelperFn.signJwtToken(user._id, '10min');
 
       await passwordResetMail.mail(email, otp, user.fullName);
-      await this.primaryUser.updateOne(
-        { _id: user._id },
-        { $set: { secretToken: otp } },
-        { new: true },
-      );
+
+      if ('token' in secretTokenExpiration) {
+        await this.primaryUser.updateOne(
+          { _id: user._id },
+          {
+            $set: {
+              secretToken: otp,
+              secretTokenExpiration: secretTokenExpiration.token,
+            },
+          },
+          { new: true },
+        );
+      }
 
       return (response = {
         statusCode: 200,
@@ -102,6 +111,8 @@ export class AuthService {
         error: null,
       });
     } catch (err) {
+      console.log(err);
+
       this.logger.error(
         `error updating user record with password reset details: ` +
           JSON.stringify(err, null, 2),
@@ -244,6 +255,61 @@ export class AuthService {
             JSON.stringify(err, null, 2),
         },
       };
+    }
+  }
+
+  async validateOtp(otp: string): Promise<IResponse> {
+    let response: IResponse;
+
+    try {
+      const userWithOtp = await this.primaryUser.findOne({ secretToken: otp });
+
+      if (!userWithOtp) {
+        return (response = {
+          statusCode: 400,
+          message: `invalid otp, request for a new one`,
+          data: false,
+          error: null,
+        });
+      }
+      const isNotExpiredOtp = HelperFn.verifyTokenExpiration(
+        userWithOtp.secretTokenExpiration,
+      );
+
+      if ('data' in isNotExpiredOtp && isNotExpiredOtp.data === false) {
+        return (response = {
+          statusCode: 400,
+          message: `expired otp, request for a new one`,
+          data: false,
+          error: null,
+        });
+      }
+
+      return (response = {
+        statusCode: 200,
+        message: `otp valid`,
+        data: true,
+        error: null,
+      });
+    } catch (err) {
+      console.log(err);
+
+      this.logger.error(
+        `an error occur while verifying otp: [${otp}]` +
+          JSON.stringify(err, null, 2),
+      );
+
+      return (response = {
+        statusCode: 400,
+        message: `error validating otp: [${otp}]`,
+        data: null,
+        error: {
+          code: 'otp_verify_failed',
+          message:
+            `an unexpected error occurred while processing the request: error ` +
+            JSON.stringify(err, null, 2),
+        },
+      });
     }
   }
 }
