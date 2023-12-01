@@ -16,6 +16,7 @@ import {
 } from './users/schemas';
 import { PrimaryUserController } from './users/controllers';
 import { FamilyModule } from './family/family.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { FamilyModule } from './family/family.module';
     DatabaseModule,
     UsersModule,
     FamilyModule,
+    ChatModule,
   ],
   controllers: [AppController, PrimaryUserController],
   providers: [
