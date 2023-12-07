@@ -66,4 +66,10 @@ export class HelperFn {
       });
     }
   }
+
+  static generateRandomNumber(len: number) {
+    const randomThreeDigitNumber = Math.floor(Math.random() * 1000) + 1;
+    const formattedNumber = String(randomThreeDigitNumber).padStart(len, '0'); // Ensures it is three digits
+    return formattedNumber;
+  }
 }

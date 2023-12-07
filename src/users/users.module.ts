@@ -12,5 +12,6 @@ import { PrimaryUser, PrimaryUserSchema } from './schemas';
   ],
   providers: [PrimaryUserService],
   controllers: [PrimaryUserController],
+  exports: [UsersModule],
 })
 export class UsersModule {}
