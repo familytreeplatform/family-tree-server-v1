@@ -17,6 +17,21 @@ export class AuthController {
   @Post('sign-in')
   @HttpCode(200)
   async signin(@Body() dto: DefaultSignInDto) {
+    if (!dto.email && !dto.phone && !dto.userName)
+      throw new HttpException(
+        {
+          message: 'email, phone or username required for login',
+          data: null,
+          statusCode: 400,
+
+          error: {
+            code: 'partial_login_credential',
+            message: `one of either email, phone or username is required for login`,
+          },
+        },
+        400,
+      );
+
     const signInResponse = await this.authService.signin(dto);
     return formatResponse(signInResponse);
   }

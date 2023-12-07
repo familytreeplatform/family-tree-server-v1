@@ -34,10 +34,6 @@ export class CreatePrimaryUserDto {
   })
   password: string;
 
-  @IsOptional()
-  @IsString()
-  placeInFamily: string;
-
   @IsNotEmpty()
   @IsString()
   gender: string;

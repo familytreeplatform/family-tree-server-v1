@@ -48,6 +48,29 @@ export class PrimaryUserController {
     return formatResponse(userNameVerifyResponse);
   }
 
+  @HttpCode(200)
+  @Post('verify-mail')
+  async validateEmail(@Body('email') email: string) {
+    if (!email)
+      throw new HttpException(
+        {
+          message: 'eamil field is required for verification',
+          data: null,
+          statusCode: 400,
+
+          error: {
+            code: 'email_field_missing',
+            message: `email field is required for this action`,
+          },
+        },
+        400,
+      );
+    const emailVerifyResponse =
+      await this.primaryUserService.validateEmail(email);
+
+    return formatResponse(emailVerifyResponse);
+  }
+
   @Post('create')
   @UseInterceptors(FileInterceptor('profilePic'))
   async signup(

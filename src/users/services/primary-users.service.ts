@@ -16,7 +16,7 @@ export class PrimaryUserService {
   private readonly logger = new Logger(PrimaryUserService.name);
   constructor(
     @InjectModel(PrimaryUser.name)
-    private primaryUser: Model<PrimaryUserDocument>,
+    private primaryUserModel: Model<PrimaryUserDocument>,
   ) {}
 
   async findUserByEmail(email: string): Promise<IResponse> {
@@ -24,7 +24,7 @@ export class PrimaryUserService {
     let response: IResponse;
 
     try {
-      const user = await this.primaryUser.findOne({ email });
+      const user = await this.primaryUserModel.findOne({ email });
 
       if (!user) {
         return (response = {
@@ -69,7 +69,7 @@ export class PrimaryUserService {
     let response: IResponse;
 
     try {
-      const user = await this.primaryUser.findOne({ _id: userId });
+      const user = await this.primaryUserModel.findOne({ _id: userId });
 
       if (!user) {
         return (response = {
@@ -116,7 +116,7 @@ export class PrimaryUserService {
     let response: IResponse;
 
     try {
-      const user = await this.primaryUser.find({
+      const user = await this.primaryUserModel.find({
         $or: [
           { email: searchUserDto.email },
           { userName: searchUserDto.userName },
@@ -188,7 +188,7 @@ export class PrimaryUserService {
 
       try {
         this.logger.log(`creating new user...`);
-        const newUser = await this.primaryUser.create({
+        const newUser = await this.primaryUserModel.create({
           ...createPrimaryUserDto,
           password: await argon2.hash(password),
         });
@@ -226,6 +226,22 @@ export class PrimaryUserService {
   async updateUser(userId: any, updatePrimaryUserDto: UpdatePrimaryUserDto) {
     let response: IResponse;
 
+    let validatePhoneUnique: PrimaryUserDocument;
+    if (updatePrimaryUserDto.phone) {
+      validatePhoneUnique = await this.primaryUserModel.findOne({
+        phone: updatePrimaryUserDto.phone,
+      });
+    }
+
+    if (validatePhoneUnique) {
+      return (response = {
+        statusCode: 400,
+        message: 'phone number already exists',
+        data: null,
+        error: null,
+      });
+    }
+
     try {
       const user = await this.getUserById(userId);
       if (!user.data || user.data === null) {
@@ -238,7 +254,7 @@ export class PrimaryUserService {
         );
       }
 
-      const updated = await this.primaryUser.findOneAndUpdate(
+      const updated = await this.primaryUserModel.findOneAndUpdate(
         { _id: userId },
         { $set: updatePrimaryUserDto },
         { new: true },
@@ -270,11 +286,53 @@ export class PrimaryUserService {
     }
   }
 
+  async validateEmail(email: string): Promise<IResponse> {
+    this.logger.log(`validating email is unique: [${email}]...`);
+    let response: IResponse;
+
+    try {
+      const isUniqueMail = await this.primaryUserModel.findOne({ email });
+
+      if (!isUniqueMail) {
+        return (response = {
+          statusCode: 200,
+          message: `email valid`,
+          data: true,
+          error: null,
+        });
+      } else {
+        return (response = {
+          statusCode: 409,
+          message: `user with this mail already exists`,
+          data: false,
+          error: null,
+        });
+      }
+    } catch (err) {
+      this.logger.error(
+        `an error occur fetching validating email: [${email}]` +
+          JSON.stringify(err, null, 2),
+      );
+
+      return (response = {
+        statusCode: 400,
+        message: `error validating email: [${email}]`,
+        data: null,
+        error: {
+          code: 'email_validation_failed',
+          message:
+            `an unexpected error occurred while processing the request: error ` +
+            JSON.stringify(err, null, 2),
+        },
+      });
+    }
+  }
+
   async validateUserName(userName: string): Promise<IResponse> {
     let response: IResponse;
 
     try {
-      const isValidUserName = await this.primaryUser.findOne({ userName });
+      const isValidUserName = await this.primaryUserModel.findOne({ userName });
 
       if (!isValidUserName) {
         return (response = {

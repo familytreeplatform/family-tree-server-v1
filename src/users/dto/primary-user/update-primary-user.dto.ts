@@ -9,11 +9,15 @@ import {
 export class UpdatePrimaryUserDto {
   @IsOptional()
   @IsString()
-  phone: string;
+  phone?: string;
 
   @IsOptional()
   @IsString()
-  fullName: string;
+  fullName?: string;
+
+  @IsOptional()
+  @IsString()
+  role?: string;
 
   @IsOptional()
   @IsString()
@@ -22,25 +26,29 @@ export class UpdatePrimaryUserDto {
     message:
       'Password must contain atleast one uppercase letter, one lowercase letter and a number',
   })
-  password: string;
+  password?: string;
 
   @IsOptional()
   @IsString()
-  gender: string;
+  gender?: string;
 
   @IsOptional()
   @IsDateString()
-  dob: string;
+  dob?: string;
 
   @IsOptional()
   @IsString()
-  address: string;
+  address?: string;
 
   @IsOptional()
   @IsString()
-  profession: string;
+  profession?: string;
 
   @IsOptional()
   @IsString()
-  about: string;
+  about?: string;
+
+  @IsOptional()
+  @IsString()
+  familyRootedTo?: any;
 }

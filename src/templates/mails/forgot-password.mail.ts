@@ -14,6 +14,7 @@ const PasswordResetMail = class {
         ],
 
         outro: [
+          `If you are recieving this mail, and you did not initiate the recovery action, proceed to take neccessary steps to protect your account.`,
           `For security reasons this otp will expire in 10 minutes, make sure to use it before then or you'll have to request for a new one.`,
           `If you encounter any issues or need further assistance, please do not hesitate to contact us at support@familytree.com`,
         ],

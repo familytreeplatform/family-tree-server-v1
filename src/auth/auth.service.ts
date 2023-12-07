@@ -7,7 +7,11 @@ import { DefaultSignInDto, ForgotPasswordDto, PasswordResetDto } from './dto';
 import { IResponse } from 'src/interfaces';
 import { HelperFn } from 'src/common/helpers/helper-fn';
 import { getRandomDigits } from 'src/common/utils';
-import { otpCodeResend, passwordResetMail } from 'src/templates/mails';
+import {
+  otpCodeResend,
+  passwordResetMail,
+  passwordResetSuccessMail,
+} from 'src/templates/mails';
 import { PrimaryUserService } from 'src/users/services';
 
 @Injectable()
@@ -24,7 +28,14 @@ export class AuthService {
     let response: IResponse;
     const { email, password } = dto;
     this.logger.log(`checking user in primary users collections...`);
-    let user = await this.primaryUser.findOne({ email });
+    let user = await this.primaryUser.findOne({
+      $or: [
+        { email: dto.email },
+        { phone: dto.phone },
+        { userName: dto.userName },
+      ],
+    });
+
     // TODO: check user in admin collection
 
     if (user === undefined || user === null) {
@@ -137,7 +148,7 @@ export class AuthService {
     const { otp, password } = passwordResetDto;
 
     try {
-      let userWithOtp;
+      let userWithOtp: PrimaryUserDocument;
       userWithOtp = await this.primaryUser.findOne({ secretToken: otp });
       if (!userWithOtp) {
         return (response = {
@@ -157,6 +168,11 @@ export class AuthService {
           { new: true },
         );
       }
+
+      await passwordResetSuccessMail.mail(
+        userWithOtp.email,
+        userWithOtp.userName,
+      );
 
       return {
         statusCode: 200,
