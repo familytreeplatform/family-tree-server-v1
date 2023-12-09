@@ -13,6 +13,9 @@ export class FamilyMember {
   @Prop()
   familyUsername: string;
 
+  @Prop()
+  familyType: string;
+
   @Prop({ type: 'ObjectId', ref: 'Family' })
   family: Family;
 

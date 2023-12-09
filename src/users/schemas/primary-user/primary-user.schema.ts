@@ -12,10 +12,10 @@ export class PrimaryUser {
   @Prop({ unique: true, sparse: true })
   email: string;
 
-  @Prop({ unique: true })
+  @Prop({ unique: true, sparse: true })
   phone: string;
 
-  @Prop({ unique: true })
+  @Prop({ unique: true, sparse: true })
   userName: string;
 
   @Prop()
