@@ -19,7 +19,7 @@ import {
 import { IResponse } from 'src/interfaces';
 import { generateJoinLink } from 'src/common/utils';
 import { HelperFn } from 'src/common/helpers/helper-fn';
-import { topLevelFamilyRelations } from '../types';
+import { zeroToFirstGenerationFamilyRelations } from '../types';
 import { FamilyRelationshipValidateDto } from '../dto/family-relationship-validate.dto';
 
 const expectedParentKeys = [
@@ -201,11 +201,13 @@ export class FamilyService {
           {
             relationshipToRoot: 'root',
             familyUsername: familyUserName,
+            familyType: createFamilyDto.familyType,
             user: newRoot._id,
           },
           {
             relationshipToRoot: createFamilyDto.relationshipToRoot,
             familyUsername: familyUserName,
+            familyType: createFamilyDto.familyType,
             user: createFamilyDto.creator,
             parent: newInActiveParent._id,
           },
@@ -280,59 +282,130 @@ export class FamilyService {
       });
     }
 
-    const userAlreadyInFamily = await this.familyMemberModel.findOne({
-      user: joinFamilyDto.user,
-      familyUsername: isFamilyExist.data.familyUsername,
+    const isUserAlreadyInSameFamilyType = await this.familyMemberModel.findOne({
+      user: new mongoose.Types.ObjectId(joinFamilyDto.user),
+      family: new mongoose.Types.ObjectId(joinFamilyDto.familyId),
+      familyType: joinFamilyDto.familyType,
     });
 
-    if (userAlreadyInFamily) {
+    if (isUserAlreadyInSameFamilyType) {
       return (response = {
         statusCode: 400,
         message: `you're already a member of this family`,
         data: null,
-        error: null,
       });
-    } else {
-      try {
-        // create a family model record for user joining a new family
-        const createFamilyMember = await this.familyMemberModel.create({
-          ...joinFamilyDto,
-          family: joinFamilyDto.familyId,
-          familyUsername: isFamilyExist.data.familyUsername,
-        });
+    }
 
-        await this.familyModel.findByIdAndUpdate(
-          { _id: joinFamilyDto.familyId },
-          { $push: { members: createFamilyMember._id } },
-          { new: true },
-        );
+    try {
+      // create a family member record for user joining a family
+      const createFamilyMember = await this.familyMemberModel.create({
+        ...joinFamilyDto,
+        family: joinFamilyDto.familyId,
+        familyUsername: isFamilyExist.data.familyUsername,
+        familyType: isFamilyExist.data.familyType,
+        parent: zeroToFirstGenerationFamilyRelations.includes(
+          joinFamilyDto.relationshipToRoot,
+        )
+          ? isFamilyExist.data.root
+          : null,
+      });
+
+      await this.familyModel.findByIdAndUpdate(
+        { _id: joinFamilyDto.familyId },
+        { $push: { members: createFamilyMember._id } },
+        { new: true },
+      );
+
+      if (
+        !zeroToFirstGenerationFamilyRelations.includes(
+          joinFamilyDto.relationshipToRoot,
+        )
+      ) {
+        /**
+         * the $match stage currently include relationshipToRoot
+         * not including root, spouse and the relationshipToRoot the new mamber selected.
+         * TODO: make this to return only records of relationships higher than that of the new member.
+         */
+        const potentialLinksToRoot = await this.familyMemberModel.aggregate([
+          {
+            $match: {
+              family: new mongoose.Types.ObjectId(joinFamilyDto.familyId),
+              relationshipToRoot: {
+                $nin: ['root', 'spouse', joinFamilyDto.relationshipToRoot],
+              },
+            },
+          },
+          {
+            $sort: {
+              relationshipToRoot: 1,
+            },
+          },
+          {
+            $limit: 20,
+          },
+          {
+            $lookup: {
+              from: 'primaryusers',
+              localField: 'parent',
+              foreignField: '_id',
+              as: 'parentInfo',
+            },
+          },
+          {
+            $unwind: '$parentInfo',
+          },
+          {
+            $project: {
+              _id: 1,
+              family: 1,
+              relationshipToRoot: 1,
+              user: 1,
+              familyUsername: 1,
+              parentInfo: {
+                _id: 1,
+                userName: 1,
+                fullName: 1,
+                profilePic: 1,
+                creator: 1,
+                isActive: 1,
+                gender: 'male',
+              },
+            },
+          },
+        ]);
 
         return (response = {
           statusCode: 200,
-          message: `you've successfully joined ${isFamilyExist.data.familyName} family`,
-          data: null,
-          error: null,
-        });
-      } catch (err) {
-        console.log(err);
-
-        this.logger.error(
-          `error adding new member to ${isFamilyExist.data.familyName} family ` +
-            JSON.stringify(err, null, 3),
-        );
-
-        return (response = {
-          statusCode: 400,
-          message: 'family join failed',
-          data: null,
-          error: {
-            code: 'family_join_failed',
-            message:
-              `an unexpected error occurred while processing the request: error ` +
-              JSON.stringify(err, null, 2),
-          },
+          message: `relationship is disconnected from root, create or select your parent who link you to the root`,
+          data: potentialLinksToRoot,
         });
       }
+
+      return (response = {
+        statusCode: 200,
+        message: `you've successfully joined ${isFamilyExist.data.familyName} family as a first generation member`,
+        data: null,
+        error: null,
+      });
+    } catch (err) {
+      console.log(err);
+
+      this.logger.error(
+        `error adding new member to ${isFamilyExist.data.familyName} family ` +
+          JSON.stringify(err, null, 3),
+      );
+
+      return (response = {
+        statusCode: 400,
+        message: 'family join failed',
+        data: null,
+        error: {
+          code: 'family_join_failed',
+          message:
+            `an unexpected error occurred while processing the request: error ` +
+            JSON.stringify(err, null, 2),
+        },
+      });
     }
   }
 
@@ -423,14 +496,16 @@ export class FamilyService {
 
     return (response = {
       statusCode: 400,
-      message: `you already belong to [${familyTypeUiqueValidateDto.familyType} family ${userFamilyTypeUnique.family.familyName}]: to create a family of same type, first exit the one you're on first`,
+      message: `you already belong to [${familyTypeUiqueValidateDto.familyType} family ${userFamilyTypeUnique.family.familyName}]: to create or join a family of same type, first exit the one you're on first`,
       data: false,
     });
   }
 
   async validateRelationshipToRoot(dto: FamilyRelationshipValidateDto) {
     let response: IResponse;
-    if (!topLevelFamilyRelations.includes(dto.relationshipToRoot)) {
+    if (
+      !zeroToFirstGenerationFamilyRelations.includes(dto.relationshipToRoot)
+    ) {
       return (response = {
         statusCode: 200,
         message: `relationship is disconnected from root, create or select your parent who link you to the root`,
@@ -450,20 +525,37 @@ export class FamilyService {
     const { searchText } = searchFamilyDto;
 
     try {
-      const families = await this.familyModel.find({
-        $or: [
-          {
-            familyName: { $regex: new RegExp(searchText, 'i') },
-          },
-          {
-            familyUsername: {
-              $regex: new RegExp(searchText, 'i'),
+      const families = await this.familyModel
+        .find({
+          $or: [
+            {
+              familyName: { $regex: new RegExp(searchText, 'i') },
             },
+            {
+              familyUsername: {
+                $regex: new RegExp(searchText, 'i'),
+              },
+            },
+            { country: new RegExp(searchText, 'i') },
+            { state: { $regex: new RegExp(searchText, 'i') } },
+          ],
+        })
+        .select(
+          'root members familyName familyUsername familyCoverImage familyJoinLink',
+        )
+        .populate({
+          path: 'root',
+          select: 'fullName role profilePic',
+        })
+        .populate({
+          path: 'members',
+          select: '-family',
+          options: { limit: 6 },
+          populate: {
+            path: 'user',
+            select: 'relationshipToRoot userName fullName profilePic',
           },
-          { country: new RegExp(searchText, 'i') },
-          { state: { $regex: new RegExp(searchText, 'i') } },
-        ],
-      });
+        });
 
       if (families.length === 0) {
         return (response = {
@@ -568,6 +660,10 @@ export class FamilyService {
     }
   }
 
+  /* 
+  Get back to this, family members can all update family bio/wikipedia but 
+  who's got the right to update other family records. THE CREATOR?
+  */
   async updateFamily(familyId: any, updateFamilyDto: Partial<CreateFamilyDto>) {
     let response: IResponse;
 
@@ -609,4 +705,6 @@ export class FamilyService {
       });
     }
   }
+
+  async updateFamilMember() {}
 }

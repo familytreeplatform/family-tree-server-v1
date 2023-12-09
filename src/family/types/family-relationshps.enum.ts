@@ -1,20 +1,20 @@
 export enum FamilyRelationshipsEnum {
-  Root = 'Root',
-  Spouse = 'Spouse',
-  Son = 'Son',
-  Daughter = 'Daughter',
-  Grandson = 'Grandson',
-  Granddaughter = 'Granddaughter',
-  Greatgrandson = 'Greatgrandson',
-  Greatgranddaughter = 'Greatgranddaughter',
+  Root = 'root',
+  Spouse = 'spouse',
+  Son = 'son',
+  Daughter = 'daughter',
+  Grandson = 'grandson',
+  Granddaughter = 'granddaughter',
+  Greatgrandson = 'greatgrandson',
+  Greatgranddaughter = 'greatgranddaughter',
 }
 
 export enum FamilyTypeEnum {
-  Paternal = 'Paternal',
-  Maternal = 'Maternal',
+  Paternal = 'paternal',
+  Maternal = 'maternal',
 }
 
-export const topLevelFamilyRelations = [
+export const zeroToFirstGenerationFamilyRelations = [
   FamilyRelationshipsEnum.Root,
   FamilyRelationshipsEnum.Spouse,
   FamilyRelationshipsEnum.Son,

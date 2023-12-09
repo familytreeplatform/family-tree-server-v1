@@ -28,24 +28,29 @@ export class AuthService {
     let response: IResponse;
     const { email, password } = dto;
     this.logger.log(`checking user in primary users collections...`);
-    let user = await this.primaryUser.findOne({
-      $or: [
-        { email: dto.email },
-        { phone: dto.phone },
-        { userName: dto.userName },
-      ],
-    });
+
+    const loginIdentifier = dto.email
+      ? { email: dto.email }
+      : dto.phone
+      ? { phone: dto.phone }
+      : { userName: dto.userName };
+
+    let user = await this.primaryUser.findOne(loginIdentifier);
 
     // TODO: check user in admin collection
 
     if (user === undefined || user === null) {
       return (response = {
         statusCode: 404,
-        message: 'user with this mail does not exist',
+        message: `user with this ${
+          Object.keys(loginIdentifier)[0]
+        } does not exist`,
         data: null,
         error: {
           code: 'user_not_found',
-          message: `no user with email ${email} was found`,
+          message: `no user with this ${
+            Object.keys(loginIdentifier)[0]
+          } was found`,
         },
       });
     } else {

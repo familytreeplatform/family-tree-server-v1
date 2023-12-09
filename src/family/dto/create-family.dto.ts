@@ -9,7 +9,7 @@ import {
 import {
   FamilyRelationshipsEnum,
   FamilyTypeEnum,
-  topLevelFamilyRelations,
+  zeroToFirstGenerationFamilyRelations,
 } from '../types';
 
 export class CreateFamilyDto {
@@ -68,22 +68,30 @@ export class CreateFamilyDto {
   @IsString()
   newRootFullName: string;
 
-  @ValidateIf((o) => !topLevelFamilyRelations.includes(o.relationshipToRoot))
+  @ValidateIf(
+    (o) => !zeroToFirstGenerationFamilyRelations.includes(o.relationshipToRoot),
+  )
   @IsNotEmpty()
   @IsString()
   newParentRelationship: string;
 
-  @ValidateIf((o) => !topLevelFamilyRelations.includes(o.relationshipToRoot))
+  @ValidateIf(
+    (o) => !zeroToFirstGenerationFamilyRelations.includes(o.relationshipToRoot),
+  )
   @IsNotEmpty()
   @IsString()
   newParentFullName: string;
 
-  @ValidateIf((o) => !topLevelFamilyRelations.includes(o.relationshipToRoot))
+  @ValidateIf(
+    (o) => !zeroToFirstGenerationFamilyRelations.includes(o.relationshipToRoot),
+  )
   @IsNotEmpty()
   @IsString()
   newParentGender: string;
 
-  @ValidateIf((o) => !topLevelFamilyRelations.includes(o.relationshipToRoot))
+  @ValidateIf(
+    (o) => !zeroToFirstGenerationFamilyRelations.includes(o.relationshipToRoot),
+  )
   @IsOptional()
   @IsDate()
   newParentDob: string;
