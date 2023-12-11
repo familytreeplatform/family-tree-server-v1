@@ -13,8 +13,10 @@ import {
   CreateFamilyDto,
   FamilyTypeUiqueValidateDto,
   JoinFamilyDto,
+  LinkToRootDto,
   QueryFamiliesDto,
   SearchFamilyDto,
+  UpdateFamilyMemberDto,
 } from '../dto';
 import { IResponse } from 'src/interfaces';
 import { generateJoinLink } from 'src/common/utils';
@@ -322,7 +324,7 @@ export class FamilyService {
         )
       ) {
         /**
-         * the $match stage currently include relationshipToRoot
+         * the $match stage currently include all relationshipToRoot values
          * not including root, spouse and the relationshipToRoot the new mamber selected.
          * TODO: make this to return only records of relationships higher than that of the new member.
          */
@@ -706,5 +708,203 @@ export class FamilyService {
     }
   }
 
-  async updateFamilMember() {}
+  async updateFamilyMember(updateFamilyMemberDto: UpdateFamilyMemberDto) {
+    let response: IResponse;
+
+    const requiredParentFields = [
+      'newParentFullName',
+      'newParentRelationshipToRoot',
+      'newParentGender',
+    ];
+
+    // Edge case: validating family exist
+    const isFamilyExist = await this.getFamilyById(
+      updateFamilyMemberDto.familyId,
+    );
+
+    if (!isFamilyExist.data || isFamilyExist.data === null) {
+      return (response = {
+        statusCode: 404,
+        message: `this family does not exist`,
+        data: null,
+        error: {
+          code: 'family_not_found',
+          message: `family with id ${updateFamilyMemberDto.familyId} not found`,
+        },
+      });
+    }
+
+    try {
+      if (
+        !requiredParentFields.every((element) =>
+          Object.keys(updateFamilyMemberDto).includes(element),
+        )
+      ) {
+        this.logger.log(`updating member with an existing user as parent`);
+        await this.familyMemberModel.findOneAndUpdate(
+          {
+            user: new mongoose.Types.ObjectId(updateFamilyMemberDto.userId),
+            family: new mongoose.Types.ObjectId(updateFamilyMemberDto.familyId),
+          },
+          {
+            $set: {
+              updateFamilyMemberDto,
+              parent: new mongoose.Types.ObjectId(
+                updateFamilyMemberDto.parentId,
+              ),
+            },
+          },
+          { new: true },
+        );
+
+        return (response = {
+          statusCode: 200,
+          message: 'member updated successfully',
+          data: null,
+          error: null,
+        });
+      }
+
+      this.logger.log(
+        `updating member with a newly created inactive user as parent`,
+      );
+      const newInActiveParent = await this.primaryUserModel.create({
+        creator: new mongoose.Types.ObjectId(updateFamilyMemberDto.userId),
+        fullName: updateFamilyMemberDto.newParentFullName,
+        gender: updateFamilyMemberDto.newParentGender,
+        userName: `${updateFamilyMemberDto.newParentFullName
+          .replace(/\s+/g, '')
+          .substring(0, 4)}${HelperFn.generateRandomNumber(3)}`,
+        isActive: false,
+      });
+
+      // create a family member record for new inactive parent
+      const createFamilyMember = await this.familyMemberModel.create({
+        relationshipToRoot: updateFamilyMemberDto.newParentRelationshipToRoot,
+        family: updateFamilyMemberDto.familyId,
+        familyUsername: isFamilyExist.data.familyUsername,
+        familyType: isFamilyExist.data.familyType,
+        user: newInActiveParent._id,
+        parent: zeroToFirstGenerationFamilyRelations.includes(
+          updateFamilyMemberDto.newParentRelationshipToRoot,
+        )
+          ? isFamilyExist.data.root
+          : null,
+      });
+
+      // update the family with new parent as member
+      await this.familyModel.findByIdAndUpdate(
+        { _id: updateFamilyMemberDto.familyId },
+        { $push: { members: createFamilyMember._id } },
+        { new: true },
+      );
+
+      // update current user family document for famulyId with newly created parent
+      await this.familyMemberModel.findOneAndUpdate(
+        {
+          user: new mongoose.Types.ObjectId(updateFamilyMemberDto.userId),
+          family: new mongoose.Types.ObjectId(updateFamilyMemberDto.familyId),
+        },
+        {
+          $set: {
+            updateFamilyMemberDto,
+            parent: new mongoose.Types.ObjectId(newInActiveParent._id),
+          },
+        },
+        { new: true },
+      );
+
+      return (response = {
+        statusCode: 200,
+        message: 'your parental link to roothas been updated successfully',
+        data: null,
+        error: null,
+      });
+    } catch (err) {
+      console.log(err);
+
+      this.logger.error(
+        `error updating family member: ` + JSON.stringify(err, null, 2),
+      );
+      return (response = {
+        statusCode: 400,
+        message: 'family member update failed',
+        data: null,
+        error: {
+          code: 'family_member_update_failed',
+          message:
+            `an unexpected error occurred while processing the request: error ` +
+            JSON.stringify(err, null, 2),
+        },
+      });
+    }
+  }
+
+  async getPotentialRootLink(linkToRootDto: LinkToRootDto) {
+    let response: IResponse;
+
+    try {
+      const potentialLinksToRoot = await this.familyMemberModel.aggregate([
+        {
+          $match: {
+            family: new mongoose.Types.ObjectId(linkToRootDto.familyId),
+            relationshipToRoot: {
+              $nin: ['root', 'spouse', linkToRootDto.relationshipToRoot],
+            },
+          },
+        },
+        {
+          $sort: {
+            relationshipToRoot: 1,
+          },
+        },
+        {
+          $limit: 20,
+        },
+        {
+          $lookup: {
+            from: 'primaryusers',
+            localField: 'parent',
+            foreignField: '_id',
+            as: 'parentInfo',
+          },
+        },
+        {
+          $unwind: '$parentInfo',
+        },
+        {
+          $project: {
+            _id: 1,
+            family: 1,
+            relationshipToRoot: 1,
+            user: 1,
+            familyUsername: 1,
+            parentInfo: {
+              _id: 1,
+              userName: 1,
+              fullName: 1,
+              profilePic: 1,
+              creator: 1,
+              isActive: 1,
+              gender: 'male',
+            },
+          },
+        },
+      ]);
+
+      return (response = {
+        statusCode: 200,
+        message: `your potential links to your family root`,
+        data: potentialLinksToRoot,
+      });
+    } catch (err) {
+      console.log(err);
+
+      return (response = {
+        statusCode: 400,
+        message:
+          `an unexpected error occurred while processing your request ` + err,
+      });
+    }
+  }
 }

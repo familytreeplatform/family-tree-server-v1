@@ -15,8 +15,10 @@ import {
   CreateFamilyDto,
   FamilyTypeUiqueValidateDto,
   JoinFamilyDto,
+  LinkToRootDto,
   QueryFamiliesDto,
   SearchFamilyDto,
+  UpdateFamilyMemberDto,
 } from '../dto';
 import { JwtGuard } from 'src/common/guards';
 import { GetUser } from 'src/common/decorators';
@@ -107,5 +109,35 @@ export class FamilyController {
       await this.familyService.queryFamilies(queryFamiliesDto);
 
     return formatResponse(familiesQueryResponse);
+  }
+
+  @HttpCode(200)
+  @Post('update-member')
+  async updateFamilyMember(
+    @Body() updateFamilyMemberDto: UpdateFamilyMemberDto,
+    @GetUser('_id') userId: any,
+  ) {
+    const updateFamilyMemberRespnse =
+      await this.familyService.updateFamilyMember({
+        ...updateFamilyMemberDto,
+        userId,
+      });
+
+    return formatResponse(updateFamilyMemberRespnse);
+  }
+
+  @HttpCode(200)
+  @Get('root-link')
+  async getPotentialRootLink(
+    @Query() linkToRootDto: LinkToRootDto,
+    @GetUser('_id') userId: any,
+  ) {
+    const potentialRootLinkResponse =
+      await this.familyService.getPotentialRootLink({
+        ...linkToRootDto,
+        user: userId,
+      });
+
+    return formatResponse(potentialRootLinkResponse);
   }
 }
