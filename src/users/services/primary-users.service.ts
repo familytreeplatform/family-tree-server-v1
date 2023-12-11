@@ -193,7 +193,7 @@ export class PrimaryUserService {
           password: await argon2.hash(password),
         });
 
-        await welcomeMail.mail(email, fullName);
+        // await welcomeMail.mail(email, fullName);
 
         return (response = {
           statusCode: 201,

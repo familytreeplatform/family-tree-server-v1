@@ -30,12 +30,12 @@ export class HelperFn {
     };
   }
 
-  static verifyJwtToken(token: string) {
+  static verifyJwtToken(token: string): { sub: any } {
     const jwtService = new JwtService({
       secret: process.env.JWT_ACCESS_SECRET,
     });
     try {
-      jwtService.verify(token);
+      return jwtService.verify(token);
     } catch (error) {
       throw new UnauthorizedException(
         `This OTP is inavlid or expired, request for another one ${error}`,
