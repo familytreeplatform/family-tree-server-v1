@@ -5,7 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './database/database.module';
 import { UsersModule } from './users/users.module';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { JwtStrategy } from './auth/strategies';
 import { PrimaryUserService } from './users/services';
@@ -15,6 +15,7 @@ import { PrimaryUserController } from './users/controllers';
 import { FamilyModule } from './family/family.module';
 import { ChatModule } from './chat/chat.module';
 import { DospacesModule } from './dospaces/dospaces.module';
+import { SentryInterceptor } from './common/interceptors/sentry.interceptor';
 
 @Module({
   imports: [
@@ -38,6 +39,10 @@ import { DospacesModule } from './dospaces/dospaces.module';
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: SentryInterceptor,
     },
   ],
 })
