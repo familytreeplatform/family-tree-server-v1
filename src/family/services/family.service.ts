@@ -226,6 +226,7 @@ export class FamilyService {
         this.logger.log(`creating the family...`);
         newFamily = await this.familyModel.create({
           ...createFamilyDto,
+          familyCoverImage: familyCoverImageURL,
           root: newRoot._id,
           familyUsername: familyUserName,
           members: [initFamilyMembers[0]._id, initFamilyMembers[1]._id],
