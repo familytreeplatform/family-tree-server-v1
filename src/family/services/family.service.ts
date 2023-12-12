@@ -23,6 +23,7 @@ import { generateJoinLink } from 'src/common/utils';
 import { HelperFn } from 'src/common/helpers/helper-fn';
 import { zeroToFirstGenerationFamilyRelations } from '../types';
 import { FamilyRelationshipValidateDto } from '../dto/family-relationship-validate.dto';
+import { DospacesService } from 'src/dospaces/dospaces.service';
 
 const expectedParentKeys = [
   'newParentRelationship',
@@ -42,6 +43,7 @@ export class FamilyService {
     @InjectModel(FamilyMember.name)
     private familyMemberModel: Model<FamilyMemberDocument>,
     private readonly primaryUserService: PrimaryUserService,
+    private readonly doSpacesService: DospacesService,
   ) {}
 
   async createFamily(createFamilyDto: CreateFamilyDto): Promise<IResponse> {
@@ -52,8 +54,13 @@ export class FamilyService {
       createFamilyDto.familyName
     }${HelperFn.generateRandomNumber(3)}`;
 
+    let familyCoverImageURL: string;
     if (createFamilyDto.familyCoverImage) {
-      this.logger.log(`handling file upload...`);
+      const fileUploadResult = await this.doSpacesService.uploadFile(
+        createFamilyDto.familyCoverImage,
+        'family-cover-images',
+      );
+      familyCoverImageURL = fileUploadResult;
     }
 
     try {
@@ -108,6 +115,7 @@ export class FamilyService {
         );
         newFamily = await this.familyModel.create({
           ...createFamilyDto,
+          familyCoverImage: familyCoverImageURL,
           familyUsername: familyUserName,
           members: [initFamilyMembers[0]._id, initFamilyMembers[1]._id],
           familyJoinLink: generateJoinLink(

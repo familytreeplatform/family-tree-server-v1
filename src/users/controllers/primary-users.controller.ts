@@ -77,6 +77,16 @@ export class PrimaryUserController {
     @UploadedFile() profilePic: Express.Multer.File,
     @Body() createPrimaryUserDto: CreatePrimaryUserDto,
   ) {
+    if (!profilePic) {
+      throw new HttpException(
+        {
+          message: `a valid display picture is required`,
+          error: 'Bad Request',
+          statusCode: 400,
+        },
+        400,
+      );
+    }
     const signUpResponse = await this.primaryUserService.signup({
       ...createPrimaryUserDto,
       profilePic,

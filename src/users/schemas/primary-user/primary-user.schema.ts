@@ -30,7 +30,7 @@ export class PrimaryUser {
   @Prop()
   secretTokenExpiration: string;
 
-  @Prop({ default: '' })
+  @Prop()
   profilePic: string;
 
   @Prop({ default: 'primaryuser' })

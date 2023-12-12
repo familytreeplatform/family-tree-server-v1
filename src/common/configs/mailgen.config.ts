@@ -5,6 +5,6 @@ export const mailGenerator = new mailGen({
   product: {
     name: 'family tree',
     link: 'https://familytreeapp.com',
-    logo: 'https://res.cloudinary.com/dnpvndlmy/image/upload/v1681197634/Pharmalink/pharmalink_logo_t8bvl4.png',
+    logo: 'https://familytreeapp-bucket.nyc3.cdn.digitaloceanspaces.com/logos/FamilyTree%20Logo%20(Final).png',
   },
 });
