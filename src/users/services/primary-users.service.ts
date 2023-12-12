@@ -11,7 +11,9 @@ import {
 } from '../dto';
 import { welcomeMail } from 'src/templates/mails';
 import { DospacesService } from 'src/dospaces/dospaces.service';
+import { Throttle } from '@nestjs/throttler';
 
+@Throttle({ default: { limit: 5, ttl: 60000 } })
 @Injectable()
 export class PrimaryUserService {
   private readonly logger = new Logger(PrimaryUserService.name);
@@ -213,7 +215,7 @@ export class PrimaryUserService {
           password: await argon2.hash(password),
         });
 
-        // await welcomeMail.mail(email, fullName);
+        await welcomeMail.mail(email, fullName);
 
         return (response = {
           statusCode: 201,

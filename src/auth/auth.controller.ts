@@ -9,7 +9,9 @@ import {
 import { AuthService } from './auth.service';
 import { DefaultSignInDto, ForgotPasswordDto, PasswordResetDto } from './dto';
 import { formatResponse } from 'src/common/utils/response-formatter';
+import { Throttle } from '@nestjs/throttler';
 
+@Throttle({ default: { limit: 3, ttl: 60000 } })
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -58,6 +60,7 @@ export class AuthController {
     return this.authService.resendOtp(forgotPasswordDto);
   }
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('validate-otp')
   @HttpCode(200)
   async validateOtp(@Body('otp') otp: string) {

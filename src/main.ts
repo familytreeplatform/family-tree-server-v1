@@ -29,7 +29,7 @@ async function bootstrap() {
   await app.listen(port, () => {
     logger.log(
       `family tree server serving on port: [${port}] in ${configService.get(
-        'HOST',
+        'NODE_ENV',
       )} mode...`,
     );
   });
