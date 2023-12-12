@@ -31,7 +31,10 @@ export class Family {
   @Prop({ required: true })
   familyUsername: string;
 
-  @Prop({ default: '' })
+  @Prop({
+    default:
+      'https://familytreeapp-bucket.nyc3.cdn.digitaloceanspaces.com/defaults/family-avatar.png',
+  })
   familyCoverImage: string;
 
   @Prop({ required: true })

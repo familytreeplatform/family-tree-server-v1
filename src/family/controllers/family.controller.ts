@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   HttpCode,
+  HttpException,
   Param,
   Post,
   Query,
@@ -38,6 +39,17 @@ export class FamilyController {
     @GetUser('_id') userId: any,
     @Body() createFamilyDto: CreateFamilyDto,
   ) {
+    if (!familyCoverImage) {
+      throw new HttpException(
+        {
+          message: `a valid display picture is required`,
+          error: 'Bad Request',
+          statusCode: 400,
+        },
+        400,
+      );
+    }
+
     const createdFamilyResponse = await this.familyService.createFamily({
       ...createFamilyDto,
       creator: userId,

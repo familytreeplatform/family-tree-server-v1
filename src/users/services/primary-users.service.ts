@@ -10,6 +10,7 @@ import {
   searchUserDto,
 } from '../dto';
 import { welcomeMail } from 'src/templates/mails';
+import { DospacesService } from 'src/dospaces/dospaces.service';
 
 @Injectable()
 export class PrimaryUserService {
@@ -17,6 +18,7 @@ export class PrimaryUserService {
   constructor(
     @InjectModel(PrimaryUser.name)
     private primaryUserModel: Model<PrimaryUserDocument>,
+    private readonly doSpacesService: DospacesService,
   ) {}
 
   async findUserByEmail(email: string): Promise<IResponse> {
@@ -183,13 +185,31 @@ export class PrimaryUserService {
         },
       });
     } else {
-      // TODO: Handle file upload to DO spaces here
+      let profilePicURL: string;
+      if (createPrimaryUserDto.profilePic) {
+        const fileUploadResult = await this.doSpacesService.uploadFile(
+          createPrimaryUserDto.profilePic,
+          'profile-pictures',
+        );
+        profilePicURL = fileUploadResult;
+      } else if (
+        !createPrimaryUserDto.profilePic &&
+        createPrimaryUserDto.gender === 'male'
+      ) {
+        profilePicURL =
+          'https://familytreeapp-bucket.nyc3.cdn.digitaloceanspaces.com/defaults/male-avatar.png';
+      } else {
+        profilePicURL =
+          'https://familytreeapp-bucket.nyc3.cdn.digitaloceanspaces.com/defaults/female-avatar.png';
+      }
+
       // TODO: Generate OTP and send via mail or SMS
 
       try {
         this.logger.log(`creating new user...`);
         const newUser = await this.primaryUserModel.create({
           ...createPrimaryUserDto,
+          profilePic: profilePicURL,
           password: await argon2.hash(password),
         });
 
