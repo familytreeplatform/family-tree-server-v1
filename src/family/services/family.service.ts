@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model } from 'mongoose';
 import {
@@ -8,7 +8,6 @@ import {
   FamilyMemberDocument,
 } from '../schemas';
 import { PrimaryUser, PrimaryUserDocument } from 'src/users/schemas';
-import { PrimaryUserService } from 'src/users/services';
 import {
   CreateFamilyDto,
   FamilyTypeUiqueValidateDto,
@@ -24,6 +23,7 @@ import { HelperFn } from 'src/common/helpers/helper-fn';
 import { zeroToFirstGenerationFamilyRelations } from '../types';
 import { FamilyRelationshipValidateDto } from '../dto/family-relationship-validate.dto';
 import { DospacesService } from 'src/dospaces/dospaces.service';
+import { DefaultService } from 'src/default/default.service';
 
 const expectedParentKeys = [
   'newParentRelationship',
@@ -42,217 +42,38 @@ export class FamilyService {
     private primaryUserModel: Model<PrimaryUserDocument>,
     @InjectModel(FamilyMember.name)
     private familyMemberModel: Model<FamilyMemberDocument>,
-    private readonly primaryUserService: PrimaryUserService,
+    @Inject(DefaultService)
+    private readonly defaultService: DefaultService,
     private readonly doSpacesService: DospacesService,
   ) {}
 
   async createFamily(createFamilyDto: CreateFamilyDto): Promise<IResponse> {
     let response: IResponse;
-    let newFamily: FamilyDocument;
 
     const familyUserName = `${
       createFamilyDto.familyName
     }${HelperFn.generateRandomNumber(3)}`;
 
-    let familyCoverImageURL: string;
-    if (createFamilyDto.familyCoverImage) {
-      const fileUploadResult = await this.doSpacesService.uploadFile(
-        createFamilyDto.familyCoverImage,
-        'family-cover-images',
-      );
-      familyCoverImageURL = fileUploadResult;
-    }
+    const familyCoverImageURL = createFamilyDto.familyCoverImage
+      ? await this.defaultService.uploadFile(
+          createFamilyDto.familyCoverImage,
+          'family-cover-image',
+        )
+      : undefined;
 
     try {
       if (createFamilyDto.root) {
-        /* 
-        TODO?:Edge Case:
-          if creator is root in say family A, check to make sure the person they're selecting as root 
-          isn't already a member of thesame family A, if so, let them know this.
-          PS: should probably be the first thing to do.
-        */
-
-        this.logger.log(
-          `validating user selected as root isn't already root on another family...`,
+        return await this.createFamilyWithExistingRoot(
+          createFamilyDto,
+          familyUserName,
+          familyCoverImageURL,
         );
-        const isSelectedRootAlreadyRooted = await this.primaryUserModel
-          .findOne({ _id: createFamilyDto.root, role: 'root' })
-          .populate({
-            path: 'familyRootedTo',
-            select: 'familyName familyUsername',
-          });
-
-        if (isSelectedRootAlreadyRooted) {
-          return (response = {
-            statusCode: 400,
-            message: `user selectd as root is already a root in ${isSelectedRootAlreadyRooted.familyRootedTo.familyName} family, consider joining the family instead`,
-            data: {
-              familyUserName:
-                isSelectedRootAlreadyRooted.familyRootedTo.familyUsername,
-            },
-            error: null,
-          });
-        }
-
-        // create new family members document for both root and creator
-        const initFamilyMembers = await this.familyMemberModel.insertMany([
-          {
-            relationshipToRoot: 'root',
-            familyUsername: familyUserName,
-            familyType: createFamilyDto.familyType,
-            user: createFamilyDto.root,
-          },
-          {
-            relationshipToRoot: createFamilyDto.relationshipToRoot,
-            familyUsername: familyUserName,
-            familyType: createFamilyDto.familyType,
-            user: createFamilyDto.creator,
-          },
-        ]);
-
-        this.logger.log(
-          `creating new family with an existing family tree user as root...`,
-        );
-        newFamily = await this.familyModel.create({
-          ...createFamilyDto,
-          familyCoverImage: familyCoverImageURL,
-          familyUsername: familyUserName,
-          members: [initFamilyMembers[0]._id, initFamilyMembers[1]._id],
-          familyJoinLink: generateJoinLink(
-            familyUserName,
-            createFamilyDto.state,
-          ),
-        });
-
-        // update family members with family id
-        await this.familyMemberModel.updateMany(
-          { familyUsername: familyUserName },
-          { $set: { family: newFamily._id } },
-        );
-
-        // TODO? add family array to user model and update for both root and creator here
-        this.logger.log(`updating role of user selected as root to "root"`);
-        await this.primaryUserService.updateUser(createFamilyDto.root, {
-          role: 'root',
-          familyRootedTo: newFamily._id,
-        });
-
-        if (
-          expectedParentKeys.every((element) =>
-            Object.keys(createFamilyDto).includes(element),
-          )
-        ) {
-          this.logger.log(
-            `creating new inactive parent record for non-first generational family member`,
-          );
-
-          const newInActiveParent = await this.primaryUserModel.create({
-            creator: new mongoose.Types.ObjectId(createFamilyDto.creator),
-            fullName: createFamilyDto.newParentFullName,
-            gender: createFamilyDto.newParentGender,
-            userName: `${createFamilyDto.newParentFullName
-              .replace(/\s+/g, '')
-              .substring(0, 4)}${HelperFn.generateRandomNumber(3)}`,
-            isActive: false,
-          });
-
-          await this.familyMemberModel.findOneAndUpdate(
-            { user: new mongoose.Types.ObjectId(createFamilyDto.creator) },
-            { $set: { parent: newInActiveParent._id } },
-          );
-        }
-
-        return (response = {
-          statusCode: 201,
-          message: `${createFamilyDto.familyName} family created successfully`,
-          data: newFamily,
-          error: null,
-        });
       } else {
-        this.logger.log(`creating new family with a new user as root`);
-
-        let newInActiveParent;
-        if (
-          expectedParentKeys.every((element) =>
-            Object.keys(createFamilyDto).includes(element),
-          )
-        ) {
-          this.logger.log(
-            `creating new inactive parent record for non-first generational family member`,
-          );
-
-          newInActiveParent = await this.primaryUserModel.create({
-            creator: new mongoose.Types.ObjectId(createFamilyDto.creator),
-            fullName: createFamilyDto.newParentFullName,
-            gender: createFamilyDto.newParentGender,
-            userName: `${createFamilyDto.newParentFullName
-              .replace(/\s+/g, '')
-              .substring(0, 4)}${HelperFn.generateRandomNumber(3)}`,
-            isActive: false,
-          });
-
-          await this.familyMemberModel.findOneAndUpdate(
-            { user: new mongoose.Types.ObjectId(createFamilyDto.creator) },
-            { $set: { parent: newInActiveParent._id } },
-          );
-        }
-
-        this.logger.log(`creating the root...`);
-        const newRoot = await this.primaryUserModel.create({
-          creator: new mongoose.Types.ObjectId(createFamilyDto.creator),
-          fullName: createFamilyDto.newRootFullName,
-          userName: createFamilyDto.newRootUserName,
-          role: 'root',
-          isActive: false,
-        });
-
-        // create a new family member document
-        const initFamilyMembers = await this.familyMemberModel.insertMany([
-          {
-            relationshipToRoot: 'root',
-            familyUsername: familyUserName,
-            familyType: createFamilyDto.familyType,
-            user: newRoot._id,
-          },
-          {
-            relationshipToRoot: createFamilyDto.relationshipToRoot,
-            familyUsername: familyUserName,
-            familyType: createFamilyDto.familyType,
-            user: createFamilyDto.creator,
-            parent: newInActiveParent._id,
-          },
-        ]);
-
-        this.logger.log(`creating the family...`);
-        newFamily = await this.familyModel.create({
-          ...createFamilyDto,
-          familyCoverImage: familyCoverImageURL,
-          root: newRoot._id,
-          familyUsername: familyUserName,
-          members: [initFamilyMembers[0]._id, initFamilyMembers[1]._id],
-          familyJoinLink: generateJoinLink(
-            familyUserName,
-            createFamilyDto.state,
-          ),
-        });
-
-        // update family members with family id
-        await this.familyMemberModel.updateMany(
-          { familyUsername: familyUserName },
-          { $set: { family: newFamily._id } },
+        return await this.createFamilyWithNewRoot(
+          createFamilyDto,
+          familyUserName,
+          familyCoverImageURL,
         );
-
-        // update newly created root with the id of the family they are root to
-        await this.primaryUserService.updateUser(newRoot._id, {
-          familyRootedTo: newFamily._id,
-        });
-
-        return (response = {
-          statusCode: 201,
-          message: `${createFamilyDto.familyName} family created successfully`,
-          data: newFamily,
-          error: null,
-        });
       }
     } catch (err) {
       console.log(err);
@@ -915,5 +736,270 @@ export class FamilyService {
           `an unexpected error occurred while processing your request ` + err,
       });
     }
+  }
+
+  private async createFamilyWithExistingRoot(
+    createFamilyDto: CreateFamilyDto,
+    familyUserName: string,
+    familyCoverImageURL: string,
+  ): Promise<IResponse> {
+    this.logger.log(`CASE_ONE: existing root`);
+
+    let response: IResponse;
+    let newFamily: FamilyDocument;
+
+    /* 
+    TODO?:Edge Case:
+      if creator is root in say family A, check to make sure the person they're selecting as root 
+      isn't already a member of thesame family A, if so, let them know this.
+      PS: should probably be the first thing to do.
+     */
+
+    this.logger.log(
+      `validating user selected as root isn't already root on another family...`,
+    );
+    const isSelectedRootAlreadyRooted = await this.primaryUserModel
+      .findOne({ _id: createFamilyDto.root, role: 'root' })
+      .populate({
+        path: 'familyRootedTo',
+        select: 'familyName familyUsername',
+      });
+
+    if (isSelectedRootAlreadyRooted) {
+      return (response = {
+        statusCode: 400,
+        message: `user selectd as root is already a root in ${isSelectedRootAlreadyRooted.familyRootedTo.familyName} family, consider joining the family instead`,
+        data: {
+          familyUserName:
+            isSelectedRootAlreadyRooted.familyRootedTo.familyUsername,
+        },
+        error: null,
+      });
+    }
+
+    this.logger.log(
+      `create new family members document for both root and creator`,
+    );
+    const initFamilyMembers = await this.familyMemberModel.insertMany([
+      {
+        relationshipToRoot: 'root',
+        familyUsername: familyUserName,
+        familyType: createFamilyDto.familyType,
+        user: createFamilyDto.root,
+      },
+      {
+        relationshipToRoot: createFamilyDto.relationshipToRoot,
+        familyUsername: familyUserName,
+        familyType: createFamilyDto.familyType,
+        user: createFamilyDto.creator,
+      },
+    ]);
+
+    this.logger.log(
+      `creating new family with an existing family tree user as root...`,
+    );
+    newFamily = await this.familyModel.create({
+      ...createFamilyDto,
+      familyCoverImage: familyCoverImageURL,
+      familyUsername: familyUserName,
+      members: [initFamilyMembers[0]._id, initFamilyMembers[1]._id],
+      familyJoinLink: generateJoinLink(familyUserName, createFamilyDto.state),
+    });
+
+    this.logger.log(
+      `updating created family members with newly created family id`,
+    );
+    await this.familyMemberModel.updateMany(
+      { familyUsername: familyUserName },
+      { $set: { family: newFamily._id } },
+    );
+
+    if (
+      expectedParentKeys.every((element) =>
+        Object.keys(createFamilyDto).includes(element),
+      )
+    ) {
+      this.logger.log(
+        `creating new inactive parent record for non-first generational family member`,
+      );
+
+      const newInActiveParent = await this.primaryUserModel.create({
+        creator: new mongoose.Types.ObjectId(createFamilyDto.creator),
+        fullName: createFamilyDto.newParentFullName,
+        gender: createFamilyDto.newParentGender,
+        userName: `${createFamilyDto.newParentFullName
+          .replace(/\s+/g, '')
+          .substring(0, 4)}${HelperFn.generateRandomNumber(3)}`,
+        isActive: false,
+      });
+
+      this.logger.log(
+        `updating non-first generational family creator with newly created parent id`,
+      );
+      await this.familyMemberModel.findOneAndUpdate(
+        { user: new mongoose.Types.ObjectId(createFamilyDto.creator) },
+        { $set: { parent: newInActiveParent._id } },
+      );
+    }
+
+    const userUpdates = [
+      {
+        updateOne: {
+          filter: {
+            _id: new mongoose.Types.ObjectId(createFamilyDto.creator),
+          },
+          update: {
+            $set: {
+              families: [new mongoose.Types.ObjectId(newFamily._id)],
+            },
+          },
+        },
+      },
+      {
+        updateOne: {
+          filter: {
+            _id: new mongoose.Types.ObjectId(createFamilyDto.root),
+          },
+          update: {
+            $set: {
+              role: 'root',
+              families: [new mongoose.Types.ObjectId(newFamily._id)],
+              familyRootedTo: newFamily._id,
+            },
+          },
+        },
+      },
+    ];
+
+    this.logger.log(`updating users documents...`);
+    await this.primaryUserModel.bulkWrite(userUpdates);
+
+    return (response = {
+      statusCode: 201,
+      message: `${createFamilyDto.familyName} family created successfully`,
+      data: newFamily,
+      error: null,
+    });
+  }
+
+  private async createFamilyWithNewRoot(
+    createFamilyDto: CreateFamilyDto,
+    familyUserName: string,
+    familyCoverImageURL: string,
+  ): Promise<IResponse> {
+    this.logger.log(`CASE_TWO: new root`);
+
+    let response: IResponse;
+    let newFamily: FamilyDocument;
+
+    let newInActiveParent;
+    if (
+      expectedParentKeys.every((element) =>
+        Object.keys(createFamilyDto).includes(element),
+      )
+    ) {
+      this.logger.log(
+        `creating new inactive parent record for non-first generational family member`,
+      );
+
+      newInActiveParent = await this.primaryUserModel.create({
+        creator: new mongoose.Types.ObjectId(createFamilyDto.creator),
+        fullName: createFamilyDto.newParentFullName,
+        gender: createFamilyDto.newParentGender,
+        userName: `${createFamilyDto.newParentFullName
+          .replace(/\s+/g, '')
+          .substring(0, 4)}${HelperFn.generateRandomNumber(3)}`,
+        isActive: false,
+      });
+
+      await this.familyMemberModel.findOneAndUpdate(
+        { user: new mongoose.Types.ObjectId(createFamilyDto.creator) },
+        { $set: { parent: newInActiveParent._id } },
+      );
+    }
+
+    this.logger.log(`creating the root...`);
+    const newRoot = await this.primaryUserModel.create({
+      creator: new mongoose.Types.ObjectId(createFamilyDto.creator),
+      fullName: createFamilyDto.newRootFullName,
+      userName: createFamilyDto.newRootUserName,
+      role: 'root',
+      isActive: false,
+    });
+
+    this.logger.log(
+      `create new family members document for both root and creator`,
+    );
+    const initFamilyMembers = await this.familyMemberModel.insertMany([
+      {
+        relationshipToRoot: 'root',
+        familyUsername: familyUserName,
+        familyType: createFamilyDto.familyType,
+        user: newRoot._id,
+      },
+      {
+        relationshipToRoot: createFamilyDto.relationshipToRoot,
+        familyUsername: familyUserName,
+        familyType: createFamilyDto.familyType,
+        user: createFamilyDto.creator,
+        parent: newInActiveParent._id,
+      },
+    ]);
+
+    this.logger.log(`creating new family with a new user as root`);
+    newFamily = await this.familyModel.create({
+      ...createFamilyDto,
+      familyCoverImage: familyCoverImageURL,
+      root: newRoot._id,
+      familyUsername: familyUserName,
+      members: [initFamilyMembers[0]._id, initFamilyMembers[1]._id],
+      familyJoinLink: generateJoinLink(familyUserName, createFamilyDto.state),
+    });
+
+    this.logger.log(
+      `updating created family members with newly created family id`,
+    );
+    await this.familyMemberModel.updateMany(
+      { familyUsername: familyUserName },
+      { $set: { family: newFamily._id } },
+    );
+
+    const userUpdates = [
+      {
+        updateOne: {
+          filter: {
+            _id: new mongoose.Types.ObjectId(createFamilyDto.creator),
+          },
+          update: {
+            $set: {
+              families: [newFamily._id],
+            },
+          },
+        },
+      },
+      {
+        updateOne: {
+          filter: {
+            _id: new mongoose.Types.ObjectId(newRoot._id),
+          },
+          update: {
+            $set: {
+              families: [newFamily._id],
+              familyRootedTo: newFamily._id,
+            },
+          },
+        },
+      },
+    ];
+
+    this.logger.log(`updating users documents...`);
+    await this.primaryUserModel.bulkWrite(userUpdates);
+
+    return (response = {
+      statusCode: 201,
+      message: `${createFamilyDto.familyName} family created successfully`,
+      data: newFamily,
+      error: null,
+    });
   }
 }

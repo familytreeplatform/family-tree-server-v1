@@ -12,6 +12,7 @@ import {
 import { welcomeMail } from 'src/templates/mails';
 import { DospacesService } from 'src/dospaces/dospaces.service';
 import { Throttle } from '@nestjs/throttler';
+import { HelperFn } from 'src/common/helpers/helper-fn';
 
 @Throttle({ default: { limit: 5, ttl: 60000 } })
 @Injectable()
@@ -172,12 +173,11 @@ export class PrimaryUserService {
   }
 
   async signup(createPrimaryUserDto: CreatePrimaryUserDto): Promise<IResponse> {
-    let response: IResponse;
     const { email, password, fullName } = createPrimaryUserDto;
     const isUniqueUser = await this.findUserByEmail(email);
 
     if (isUniqueUser.data) {
-      return (response = {
+      return <IResponse>{
         statusCode: 400,
         message: `user with this mail already exist`,
         data: null,
@@ -185,44 +185,45 @@ export class PrimaryUserService {
           code: 'mail_already_exist',
           message: `user with email ${email} already exist`,
         },
-      });
+      };
     } else {
-      let profilePicURL: string;
-      if (createPrimaryUserDto.profilePic) {
-        const fileUploadResult = await this.doSpacesService.uploadFile(
-          createPrimaryUserDto.profilePic,
-          'profile-pictures',
-        );
-        profilePicURL = fileUploadResult;
-      } else if (
-        !createPrimaryUserDto.profilePic &&
-        createPrimaryUserDto.gender === 'male'
-      ) {
-        profilePicURL =
-          'https://familytreeapp-bucket.nyc3.cdn.digitaloceanspaces.com/defaults/male-avatar.png';
-      } else {
-        profilePicURL =
-          'https://familytreeapp-bucket.nyc3.cdn.digitaloceanspaces.com/defaults/female-avatar.png';
-      }
+      // let profilePicURL: string;
+      // if (createPrimaryUserDto.profilePic) {
+      //   const fileUploadResult = await this.doSpacesService.uploadFile(
+      //     createPrimaryUserDto.profilePic,
+      //     'profile-pictures',
+      //   );
+      //   profilePicURL = fileUploadResult;
+      // } else if (
+      //   !createPrimaryUserDto.profilePic &&
+      //   createPrimaryUserDto.gender === 'male'
+      // ) {
+      //   profilePicURL =
+      //     'https://familytreeapp-bucket.nyc3.cdn.digitaloceanspaces.com/defaults/male-avatar.png';
+      // } else {
+      //   profilePicURL =
+      //     'https://familytreeapp-bucket.nyc3.cdn.digitaloceanspaces.com/defaults/female-avatar.png';
+      // }
 
-      // TODO: Generate OTP and send via mail or SMS
+      // TODO: Generate OTP and send via mail or SMS (if this is enabled, then stop login token generation)
 
       try {
         this.logger.log(`creating new user...`);
         const newUser = await this.primaryUserModel.create({
           ...createPrimaryUserDto,
-          profilePic: profilePicURL,
           password: await argon2.hash(password),
         });
 
         await welcomeMail.mail(email, fullName);
+        const tokens = HelperFn.signJwtToken(newUser._id);
 
-        return (response = {
+        newUser.password = undefined;
+        return <IResponse>{
           statusCode: 201,
           message: 'user created successfully',
-          data: newUser,
+          data: tokens,
           error: null,
-        });
+        };
       } catch (err) {
         console.log(err);
 
@@ -230,7 +231,7 @@ export class PrimaryUserService {
           `error creating new user: ` + JSON.stringify(err, null, 2),
         );
 
-        return (response = {
+        return <IResponse>{
           statusCode: 400,
           message: 'user creation failed',
           data: null,
@@ -240,7 +241,7 @@ export class PrimaryUserService {
               `an unexpected error occurred while processing the request: error ` +
               JSON.stringify(err, null, 2),
           },
-        });
+        };
       }
     }
   }

@@ -6,9 +6,7 @@ import {
   HttpException,
   Patch,
   Post,
-  UploadedFile,
   UseGuards,
-  UseInterceptors,
 } from '@nestjs/common';
 import { PrimaryUserService } from '../services';
 import {
@@ -19,7 +17,6 @@ import {
 import { formatResponse } from 'src/common/utils/response-formatter';
 import { JwtGuard } from 'src/common/guards';
 import { GetUser } from 'src/common/decorators';
-import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('user/primary')
 export class PrimaryUserController {
@@ -72,25 +69,9 @@ export class PrimaryUserController {
   }
 
   @Post('create')
-  @UseInterceptors(FileInterceptor('profilePic'))
-  async signup(
-    @UploadedFile() profilePic: Express.Multer.File,
-    @Body() createPrimaryUserDto: CreatePrimaryUserDto,
-  ) {
-    if (!profilePic) {
-      throw new HttpException(
-        {
-          message: `a valid display picture is required`,
-          error: 'Bad Request',
-          statusCode: 400,
-        },
-        400,
-      );
-    }
-    const signUpResponse = await this.primaryUserService.signup({
-      ...createPrimaryUserDto,
-      profilePic,
-    });
+  async signup(@Body() createPrimaryUserDto: CreatePrimaryUserDto) {
+    const signUpResponse =
+      await this.primaryUserService.signup(createPrimaryUserDto);
 
     return formatResponse(signUpResponse);
   }

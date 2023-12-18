@@ -36,7 +36,7 @@ export class PrimaryUser {
   @Prop({ default: 'primaryuser' })
   role: string;
 
-  @Prop({ type: 'ObjectId', ref: 'Family' })
+  @Prop({ ref: 'Family' })
   families: Family[];
 
   @Prop({ type: 'ObjectId', ref: 'PrimaryUser' })
