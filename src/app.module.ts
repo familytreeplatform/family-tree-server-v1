@@ -16,6 +16,7 @@ import { FamilyModule } from './family/family.module';
 import { ChatModule } from './chat/chat.module';
 import { DospacesModule } from './dospaces/dospaces.module';
 import { SentryInterceptor } from './common/interceptors/sentry.interceptor';
+import { DefaultModule } from './default/default.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { SentryInterceptor } from './common/interceptors/sentry.interceptor';
     FamilyModule,
     ChatModule,
     DospacesModule,
+    DefaultModule,
   ],
   controllers: [AppController, PrimaryUserController],
   providers: [

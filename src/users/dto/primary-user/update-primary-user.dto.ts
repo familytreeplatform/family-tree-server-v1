@@ -1,3 +1,4 @@
+import { Transform } from 'class-transformer';
 import {
   IsDateString,
   IsOptional,
@@ -5,6 +6,7 @@ import {
   Matches,
   MinLength,
 } from 'class-validator';
+import { ObjectId } from 'mongoose';
 
 export class UpdatePrimaryUserDto {
   @IsOptional()
@@ -47,6 +49,10 @@ export class UpdatePrimaryUserDto {
   @IsOptional()
   @IsString()
   about?: string;
+
+  @IsOptional()
+  @IsString()
+  family?: any;
 
   @IsOptional()
   @IsString()

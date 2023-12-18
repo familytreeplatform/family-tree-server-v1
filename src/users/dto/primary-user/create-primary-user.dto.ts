@@ -50,5 +50,7 @@ export class CreatePrimaryUserDto {
   @IsString()
   state: string;
 
-  profilePic: Express.Multer.File;
+  @IsNotEmpty()
+  @IsString()
+  profilePic: string;
 }

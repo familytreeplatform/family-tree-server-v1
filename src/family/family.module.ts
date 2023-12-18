@@ -10,6 +10,7 @@ import {
 } from './schemas';
 import { MongooseModule } from '@nestjs/mongoose';
 import { PrimaryUser, PrimaryUserSchema } from 'src/users/schemas';
+import { DefaultModule } from 'src/default/default.module';
 
 @Module({
   imports: [
@@ -18,8 +19,9 @@ import { PrimaryUser, PrimaryUserSchema } from 'src/users/schemas';
       { name: PrimaryUser.name, schema: PrimaryUserSchema },
       { name: FamilyMember.name, schema: FamilyMemberSchema },
     ]),
+    DefaultModule,
   ],
-  providers: [FamilyService, PrimaryUserService],
+  providers: [FamilyService],
   controllers: [FamilyController],
 })
 export class FamilyModule {}
