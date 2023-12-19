@@ -11,7 +11,12 @@ import { ObjectId } from 'mongoose';
 import { ChatService } from './chat.service';
 import { MessageDto } from './dto';
 
-@WebSocketGateway()
+@WebSocketGateway({
+  cors: {
+    origin: '*',
+  },
+  transports: ['websocket'],
+})
 export class ChatGateway implements OnGatewayConnection {
   private store = new Map<ObjectId, string>();
 
