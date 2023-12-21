@@ -31,6 +31,7 @@ export class DefaultController {
       );
     }
 
+    console.log('FIELDNAME', fieldName, uploadFileTypeDto);
     return await this.defaultService.uploadFile(
       fieldName,
       uploadFileTypeDto.folder,
