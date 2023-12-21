@@ -15,15 +15,18 @@ export class DefaultController {
   constructor(private readonly defaultService: DefaultService) {}
 
   @Post('file-upload')
-  @UseInterceptors(FileInterceptor('fieldName'))
+  @UseInterceptors(FileInterceptor('file'))
   async uploadFile(
-    @UploadedFile() fieldName: Express.Multer.File,
+    @UploadedFile() file: Express.Multer.File,
     @Body() uploadFileTypeDto: UploadFileTypeDto,
   ): Promise<string> {
-    if (!fieldName) {
+    console.log(file);
+    console.log('FIELDNAME', file, uploadFileTypeDto);
+
+    if (!file) {
       throw new HttpException(
         {
-          message: `a valid file type is required`,
+          message: `file field is required`,
           error: 'Bad Request',
           statusCode: 400,
         },
@@ -31,10 +34,7 @@ export class DefaultController {
       );
     }
 
-    console.log('FIELDNAME', fieldName, uploadFileTypeDto);
-    return await this.defaultService.uploadFile(
-      fieldName,
-      uploadFileTypeDto.folder,
-    );
+    console.log('FIELDNAME', file, uploadFileTypeDto);
+    return await this.defaultService.uploadFile(file, uploadFileTypeDto.folder);
   }
 }
