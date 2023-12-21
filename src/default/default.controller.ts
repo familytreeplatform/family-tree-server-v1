@@ -20,8 +20,8 @@ export class DefaultController {
     @UploadedFile() file: Express.Multer.File,
     @Body() uploadFileTypeDto: UploadFileTypeDto,
   ): Promise<string> {
-    console.log(file);
-    console.log('FIELDNAME', file, uploadFileTypeDto);
+    console.log('FILE', file);
+    console.log('FOLDER_NAME', uploadFileTypeDto.folder);
 
     if (!file) {
       throw new HttpException(
@@ -34,7 +34,6 @@ export class DefaultController {
       );
     }
 
-    console.log('FIELDNAME', file, uploadFileTypeDto);
     return await this.defaultService.uploadFile(file, uploadFileTypeDto.folder);
   }
 }
