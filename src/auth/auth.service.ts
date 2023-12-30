@@ -35,7 +35,9 @@ export class AuthService {
       ? { phone: dto.phone }
       : { userName: dto.userName };
 
-    let user = await this.primaryUser.findOne(loginIdentifier);
+    console.log('LOGIN_IDENT:', loginIdentifier);
+
+    const user = await this.primaryUser.findOne(loginIdentifier);
 
     // TODO: check user in admin collection
 
