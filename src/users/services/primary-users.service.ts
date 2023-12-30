@@ -174,37 +174,28 @@ export class PrimaryUserService {
 
   async signup(createPrimaryUserDto: CreatePrimaryUserDto): Promise<IResponse> {
     const { email, password, fullName } = createPrimaryUserDto;
-    const isUniqueUser = await this.findUserByEmail(email);
 
-    if (isUniqueUser.data) {
+    let isUniquePhone = false;
+    if (createPrimaryUserDto.phone) {
+      const userWithPhone = await this.validatePhone(
+        createPrimaryUserDto.phone,
+      );
+
+      isUniquePhone = userWithPhone.data;
+    }
+    console.log('IS_UNIQUE_PHONE', isUniquePhone);
+
+    if (!isUniquePhone) {
       return <IResponse>{
         statusCode: 400,
-        message: `user with this mail already exist`,
+        message: `user with this phone number already exist`,
         data: null,
         error: {
-          code: 'mail_already_exist',
-          message: `user with email ${email} already exist`,
+          code: 'phone_already_exist',
+          message: `user with phone ${createPrimaryUserDto.phone} already exist`,
         },
       };
     } else {
-      // let profilePicURL: string;
-      // if (createPrimaryUserDto.profilePic) {
-      //   const fileUploadResult = await this.doSpacesService.uploadFile(
-      //     createPrimaryUserDto.profilePic,
-      //     'profile-pictures',
-      //   );
-      //   profilePicURL = fileUploadResult;
-      // } else if (
-      //   !createPrimaryUserDto.profilePic &&
-      //   createPrimaryUserDto.gender === 'male'
-      // ) {
-      //   profilePicURL =
-      //     'https://familytreeapp-bucket.nyc3.cdn.digitaloceanspaces.com/defaults/male-avatar.png';
-      // } else {
-      //   profilePicURL =
-      //     'https://familytreeapp-bucket.nyc3.cdn.digitaloceanspaces.com/defaults/female-avatar.png';
-      // }
-
       // TODO: Generate OTP and send via mail or SMS (if this is enabled, then stop login token generation)
 
       try {
@@ -311,43 +302,81 @@ export class PrimaryUserService {
 
   async validateEmail(email: string): Promise<IResponse> {
     this.logger.log(`validating email is unique: [${email}]...`);
-    let response: IResponse;
 
     try {
       const isUniqueMail = await this.primaryUserModel.findOne({ email });
 
       if (!isUniqueMail) {
-        return (response = {
+        return <IResponse>{
           statusCode: 200,
           message: `email valid`,
           data: true,
           error: null,
-        });
+        };
       } else {
-        return (response = {
+        return <IResponse>{
           statusCode: 409,
           message: `user with this mail already exists`,
           data: false,
           error: null,
-        });
+        };
       }
     } catch (err) {
       this.logger.error(
-        `an error occur fetching validating email: [${email}]` +
+        `an error occur validating email: [${email}]` +
           JSON.stringify(err, null, 2),
       );
 
-      return (response = {
+      return <IResponse>{
         statusCode: 400,
         message: `error validating email: [${email}]`,
         data: null,
         error: {
           code: 'email_validation_failed',
-          message:
-            `an unexpected error occurred while processing the request: error ` +
-            JSON.stringify(err, null, 2),
+          message: `an unexpected error occurred while processing the request`,
+          error: JSON.stringify(err, null, 2),
         },
-      });
+      };
+    }
+  }
+
+  private async validatePhone(phone: string): Promise<IResponse> {
+    this.logger.log(`validating phone is unique: [${phone}]...`);
+
+    try {
+      const isUniquePhone = await this.primaryUserModel.findOne({ phone });
+
+      if (!isUniquePhone) {
+        return <IResponse>{
+          statusCode: 200,
+          message: `phone valid`,
+          data: true,
+          error: null,
+        };
+      } else {
+        return <IResponse>{
+          statusCode: 409,
+          message: `user with this phone already exists`,
+          data: false,
+          error: null,
+        };
+      }
+    } catch (err) {
+      this.logger.error(
+        `an error occur validating phone number: [${phone}]` +
+          JSON.stringify(err, null, 2),
+      );
+
+      return <IResponse>{
+        statusCode: 400,
+        message: `error validating phone number: [${phone}]`,
+        data: null,
+        error: {
+          code: 'phone_validation_failed',
+          message: `an unexpected error occurred while processing the request`,
+          error: JSON.stringify(err, null, 2),
+        },
+      };
     }
   }
 
