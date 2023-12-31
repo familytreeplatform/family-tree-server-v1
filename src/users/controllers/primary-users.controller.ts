@@ -51,7 +51,7 @@ export class PrimaryUserController {
     if (!email)
       throw new HttpException(
         {
-          message: 'eamil field is required for verification',
+          message: 'email is required for verification',
           data: null,
           statusCode: 400,
 
