@@ -389,14 +389,14 @@ export class PrimaryUserService {
       if (!isValidUserName) {
         return (response = {
           statusCode: 200,
-          message: `username valid`,
+          message: `username available`,
           data: true,
           error: null,
         });
       }
       return (response = {
         statusCode: 409,
-        message: `a user with this username already exist`,
+        message: `username taken`,
         data: false,
         error: null,
       });
