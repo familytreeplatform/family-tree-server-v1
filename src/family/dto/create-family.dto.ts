@@ -17,9 +17,8 @@ export class CreateFamilyDto {
   @IsString()
   creator: string;
 
-  @ValidateIf(
-    (o) => o.newRootUserName == undefined || o.newRootFullName === undefined,
-  )
+  // EXISTING ROOT DATA: Applicable For When Creating Family With An Existing User As Root
+  @ValidateIf((o) => o.newRootFullName === undefined)
   @IsNotEmpty()
   @IsString()
   root: string;
@@ -51,6 +50,10 @@ export class CreateFamilyDto {
   familyBio: string;
 
   @IsNotEmpty()
+  @IsString()
+  familyCoverImageURL: string;
+
+  @IsNotEmpty()
   @IsEnum(FamilyRelationshipsEnum, {
     message: `relationship to root valid options are ${Object.values(
       FamilyRelationshipsEnum,
@@ -58,22 +61,38 @@ export class CreateFamilyDto {
   })
   relationshipToRoot: FamilyRelationshipsEnum;
 
-  @ValidateIf((o) => !o.root || o.root === undefined)
-  @IsNotEmpty()
-  @IsString()
-  newRootUserName: string;
-
+  // NEW ROOT DATA: Applicable Only When creating Family With A New User Root
   @ValidateIf((o) => !o.root || o.root === undefined)
   @IsNotEmpty()
   @IsString()
   newRootFullName: string;
 
+  // @ValidateIf((o) => !o.root || o.root === undefined)
+  // @IsNotEmpty()
+  // @IsString()
+  // newRootProfileURL: string;
+
+  @ValidateIf((o) => !o.root || o.root === undefined)
+  @IsOptional()
+  @IsString()
+  newRootGender: string;
+
+  @ValidateIf((o) => !o.root || o.root === undefined)
+  @IsOptional()
+  @IsString()
+  newRootDob: string;
+
+  // PARENT DATA: Applicable To Non-First Generational Family Creators
   @ValidateIf(
     (o) => !zeroToFirstGenerationFamilyRelations.includes(o.relationshipToRoot),
   )
   @IsNotEmpty()
-  @IsString()
-  newParentRelationship: string;
+  @IsEnum(FamilyRelationshipsEnum, {
+    message: `relationship to root valid options are ${Object.values(
+      FamilyRelationshipsEnum,
+    )}`,
+  })
+  newParentRelationshipToRoot: FamilyRelationshipsEnum;
 
   @ValidateIf(
     (o) => !zeroToFirstGenerationFamilyRelations.includes(o.relationshipToRoot),
@@ -87,6 +106,13 @@ export class CreateFamilyDto {
   )
   @IsNotEmpty()
   @IsString()
+  newParentProfileURL: string;
+
+  @ValidateIf(
+    (o) => !zeroToFirstGenerationFamilyRelations.includes(o.relationshipToRoot),
+  )
+  @IsOptional()
+  @IsString()
   newParentGender: string;
 
   @ValidateIf(
@@ -95,6 +121,4 @@ export class CreateFamilyDto {
   @IsOptional()
   @IsDate()
   newParentDob: string;
-
-  familyCoverImage: Express.Multer.File;
 }
