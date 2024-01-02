@@ -33,13 +33,13 @@ export class FamilyController {
   constructor(private readonly familyService: FamilyService) {}
 
   @Post('create')
-  @UseInterceptors(FileInterceptor('familyCoverImage'))
   async createFamily(
-    @UploadedFile() familyCoverImage: Express.Multer.File,
     @GetUser('_id') userId: any,
     @Body() createFamilyDto: CreateFamilyDto,
   ) {
-    if (!familyCoverImage) {
+    console.log('FAMILY_CREATE_BODY', createFamilyDto);
+
+    if (!createFamilyDto.familyCoverImageURL) {
       throw new HttpException(
         {
           message: `a valid display picture is required`,
@@ -53,7 +53,6 @@ export class FamilyController {
     const createdFamilyResponse = await this.familyService.createFamily({
       ...createFamilyDto,
       creator: userId,
-      familyCoverImage,
     });
 
     return formatResponse(createdFamilyResponse);

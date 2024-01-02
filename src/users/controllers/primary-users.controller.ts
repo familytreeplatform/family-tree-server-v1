@@ -70,6 +70,21 @@ export class PrimaryUserController {
 
   @Post('create')
   async signup(@Body() createPrimaryUserDto: CreatePrimaryUserDto) {
+    if (!createPrimaryUserDto.profilePic)
+      throw new HttpException(
+        {
+          message: 'a valid profile pricture is required',
+          data: null,
+          statusCode: 400,
+
+          error: {
+            code: 'missing_profile_pricture',
+            message: `profile picure is required`,
+          },
+        },
+        400,
+      );
+
     const signUpResponse =
       await this.primaryUserService.signup(createPrimaryUserDto);
 
