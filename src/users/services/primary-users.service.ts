@@ -118,39 +118,33 @@ export class PrimaryUserService {
   }
 
   async searchUser(searchUserDto: searchUserDto) {
-    let response: IResponse;
+    const { searchText } = searchUserDto;
 
     try {
       const user = await this.primaryUserModel.find({
-        $or: [
-          { email: searchUserDto.email },
-          { userName: searchUserDto.userName },
-        ],
+        $or: [{ email: searchText }, { userName: searchText }],
       });
 
-      const key = searchUserDto.email ? 'email' : 'username';
-      const value = searchUserDto.email
-        ? searchUserDto.email
-        : searchUserDto.userName;
-
       if (user.length === 0) {
-        return (response = {
+        return <IResponse>{
           statusCode: 404,
-          message: `no user found with this ${key}`,
+          message: `no user found with this ${searchText}`,
           data: null,
           error: {
             code: 'user_not_found',
-            message: `user with ${key}: ${value} not found`,
+            message: `user with [${searchText}] not found`,
           },
-        });
+        };
       }
 
-      return (response = {
+      const { _id, fullName, userName, profilePic, phone } = user[0];
+      const safeUser = { _id, fullName, userName, profilePic, phone };
+      return <IResponse>{
         statusCode: 200,
-        message: `user with ${key}: ${value} retrived successfully`,
-        data: user[0],
+        message: `user with [${searchText}] retrived successfully`,
+        data: safeUser,
         error: null,
-      });
+      };
     } catch (err) {
       console.log(err);
 
@@ -158,7 +152,7 @@ export class PrimaryUserService {
         `an error occur searching user` + JSON.stringify(err, null, 2),
       );
 
-      return (response = {
+      return <IResponse>{
         statusCode: 400,
         message: `error searching user`,
         data: null,
@@ -168,7 +162,7 @@ export class PrimaryUserService {
             `an unexpected error occurred while processing the request: error ` +
             JSON.stringify(err, null, 2),
         },
-      });
+      };
     }
   }
 
