@@ -108,19 +108,19 @@ export class FamilyService {
       });
     }
 
-    const isUserAlreadyInSameFamilyType = await this.familyMemberModel.findOne({
-      user: new mongoose.Types.ObjectId(joinFamilyDto.user),
-      family: new mongoose.Types.ObjectId(joinFamilyDto.familyId),
-      familyType: joinFamilyDto.familyType,
-    });
+    // const isUserAlreadyInSameFamilyType = await this.familyMemberModel.findOne({
+    //   user: new mongoose.Types.ObjectId(joinFamilyDto.user),
+    //   family: new mongoose.Types.ObjectId(joinFamilyDto.familyId),
+    //   familyType: joinFamilyDto.familyType,
+    // });
 
-    if (isUserAlreadyInSameFamilyType) {
-      return (response = {
-        statusCode: 400,
-        message: `you're already a member of this family`,
-        data: null,
-      });
-    }
+    // if (isUserAlreadyInSameFamilyType) {
+    //   return (response = {
+    //     statusCode: 400,
+    //     message: `you're already a member of this family`,
+    //     data: null,
+    //   });
+    // }
 
     try {
       // create a family member record for user joining a family
@@ -316,14 +316,14 @@ export class FamilyService {
       return (response = {
         statusCode: 200,
         message: `user does not belong to any family of same type`,
-        data: true,
+        data: false,
       });
     }
 
     return (response = {
       statusCode: 400,
       message: `you already belong to [${familyTypeUiqueValidateDto.familyType} family ${userFamilyTypeUnique.family.familyName}]: to create or join a family of same type, first exit the one you're on first`,
-      data: false,
+      data: true,
     });
   }
 
@@ -341,7 +341,7 @@ export class FamilyService {
 
     return (response = {
       statusCode: 200,
-      message: `relationship is directly related to root, skip parent create or select`,
+      message: `relationship is directly related to root, skip parent create`,
       data: true,
     });
   }
@@ -453,7 +453,7 @@ export class FamilyService {
       if (families.length === 0) {
         return (response = {
           statusCode: 404,
-          message: `no family found with these record`,
+          message: `no family found with these records`,
           data: null,
           error: null,
         });
@@ -583,7 +583,7 @@ export class FamilyService {
 
         return (response = {
           statusCode: 200,
-          message: 'member updated successfully',
+          message: 'record updated successfully',
           data: null,
           error: null,
         });
@@ -600,6 +600,7 @@ export class FamilyService {
           .replace(/\s+/g, '')
           .substring(0, 4)}${HelperFn.generateRandomNumber(3)}`,
         isActive: false,
+        profilePic: updateFamilyMemberDto.newParentProfilePicUrl,
       });
 
       // create a family member record for new inactive parent
@@ -640,7 +641,7 @@ export class FamilyService {
 
       return (response = {
         statusCode: 200,
-        message: 'your parental link to roothas been updated successfully',
+        message: 'your parental link to root has been updated successfully',
         data: null,
         error: null,
       });

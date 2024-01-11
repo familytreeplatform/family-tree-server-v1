@@ -45,6 +45,11 @@ export class UpdateFamilyMemberDto {
   newParentGender: string;
 
   @ValidateIf((o) => !o.parentId)
+  @IsNotEmpty()
+  @IsString()
+  newParentProfilePicUrl: string;
+
+  @ValidateIf((o) => !o.parentId)
   @IsOptional()
   @IsDate()
   newParentDob: Date;
