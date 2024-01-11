@@ -128,7 +128,7 @@ export class PrimaryUserService {
       if (user.length === 0) {
         return <IResponse>{
           statusCode: 404,
-          message: `no user found with this ${searchText}`,
+          message: `no user found with this record: ${searchText}`,
           data: null,
           error: {
             code: 'user_not_found',
