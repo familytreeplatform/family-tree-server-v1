@@ -311,13 +311,17 @@ export class FamilyService {
           select: 'familyName',
         });
 
+      console.log('UNIQUE', userFamilyTypeUnique);
+
       if (!userFamilyTypeUnique) {
+        this.logger.log(`family type not found`);
         return <IResponse>{
           statusCode: 200,
           message: `user does not belong to any family of same type`,
           data: false,
         };
       } else {
+        this.logger.log(`family type found`);
         return <IResponse>{
           statusCode: 400,
           message: `you already belong to [${familyTypeUiqueValidateDto.familyType} family ${userFamilyTypeUnique.family.familyName}]: to create or join a family of same type, first exit the one you're on first`,
