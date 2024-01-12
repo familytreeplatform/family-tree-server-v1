@@ -294,37 +294,56 @@ export class FamilyService {
   async validateFamilyTypeUniqueness(
     familyTypeUiqueValidateDto: FamilyTypeUiqueValidateDto,
   ) {
-    let response: IResponse;
-
     this.logger.log(
       `validating user doesn't already belong to a family of same type [MATERNAL or PATERNAL]`,
     );
-    const userFamilyTypeUnique = await this.familyMemberModel
-      .findOne({
-        user: familyTypeUiqueValidateDto.userId,
-        familyType: {
-          $regex: new RegExp(familyTypeUiqueValidateDto.familyType, 'i'),
+    try {
+      const userFamilyTypeUnique = await this.familyMemberModel
+        .findOne({
+          user: familyTypeUiqueValidateDto.userId,
+          familyType: {
+            $regex: new RegExp(familyTypeUiqueValidateDto.familyType, 'i'),
+          },
+        })
+        .select('relationshipToRoot')
+        .populate({
+          path: 'family',
+          select: 'familyName',
+        });
+
+      if (!userFamilyTypeUnique) {
+        return <IResponse>{
+          statusCode: 200,
+          message: `user does not belong to any family of same type`,
+          data: false,
+        };
+      } else {
+        return <IResponse>{
+          statusCode: 400,
+          message: `you already belong to [${familyTypeUiqueValidateDto.familyType} family ${userFamilyTypeUnique.family.familyName}]: to create or join a family of same type, first exit the one you're on first`,
+          data: true,
+        };
+      }
+    } catch (err) {
+      console.log(err);
+
+      this.logger.error(
+        `an error occur while verifying family uniqueness` +
+          JSON.stringify(err, null, 2),
+      );
+
+      return <IResponse>{
+        statusCode: 400,
+        message: `error verifying family uniqueness`,
+        data: null,
+        error: {
+          code: 'family_uniqueness_verify_failed',
+          message:
+            `an unexpected error occurred while processing the request: error ` +
+            JSON.stringify(err, null, 2),
         },
-      })
-      .select('relationshipToRoot')
-      .populate({
-        path: 'family',
-        select: 'familyName',
-      });
-
-    if (!userFamilyTypeUnique) {
-      return (response = {
-        statusCode: 200,
-        message: `user does not belong to any family of same type`,
-        data: false,
-      });
+      };
     }
-
-    return (response = {
-      statusCode: 400,
-      message: `you already belong to [${familyTypeUiqueValidateDto.familyType} family ${userFamilyTypeUnique.family.familyName}]: to create or join a family of same type, first exit the one you're on first`,
-      data: true,
-    });
   }
 
   async validateRelationshipToRoot(dto: FamilyRelationshipValidateDto) {
