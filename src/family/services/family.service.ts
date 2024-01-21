@@ -1,15 +1,18 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import mongoose, { Model } from 'mongoose';
+import mongoose, { Model, Types } from 'mongoose';
 import {
   Family,
   FamilyDocument,
   FamilyMember,
   FamilyMemberDocument,
+  FamilyWiki,
+  FamilyWikiDocument,
 } from '../schemas';
 import { PrimaryUser, PrimaryUserDocument } from 'src/users/schemas';
 import {
   CreateFamilyDto,
+  CreateFamilyWikiDto,
   FamilyTypeUiqueValidateDto,
   JoinFamilyDto,
   LinkToRootDto,
@@ -20,13 +23,8 @@ import {
 import { IResponse } from 'src/interfaces';
 import { generateJoinLink } from 'src/common/utils';
 import { HelperFn } from 'src/common/helpers/helper-fn';
-import {
-  FamilyRelationshipsEnum,
-  zeroToFirstGenerationFamilyRelations,
-} from '../types';
+import { zeroToFirstGenerationFamilyRelations } from '../types';
 import { FamilyRelationshipValidateDto } from '../dto/family-relationship-validate.dto';
-import { DospacesService } from 'src/dospaces/dospaces.service';
-import { DefaultService } from 'src/default/default.service';
 
 @Injectable()
 export class FamilyService {
@@ -38,9 +36,8 @@ export class FamilyService {
     private primaryUserModel: Model<PrimaryUserDocument>,
     @InjectModel(FamilyMember.name)
     private familyMemberModel: Model<FamilyMemberDocument>,
-    @Inject(DefaultService)
-    private readonly defaultService: DefaultService,
-    private readonly doSpacesService: DospacesService,
+    @InjectModel(FamilyWiki.name)
+    private familyWikiModel: Model<FamilyWikiDocument>,
   ) {}
 
   async createFamily(createFamilyDto: CreateFamilyDto): Promise<IResponse> {
@@ -237,22 +234,23 @@ export class FamilyService {
 
   async getFamilyById(familyId: any): Promise<IResponse> {
     this.logger.log(`lookup user with id: [${familyId}]...`);
-    let response: IResponse;
 
     try {
       const family = await this.familyModel
         .findOne({ _id: familyId })
+        .populate('wiki')
         .populate('branches')
         .populate({
           path: 'members',
-          // populate: {
-          //   path: 'userId',
-          //   model: 'PrimaryUser',
-          // },
+          populate: {
+            path: 'user',
+            model: 'PrimaryUser',
+            select: '_id, fullName gender',
+          },
         });
 
       if (!family) {
-        return (response = {
+        return <IResponse>{
           statusCode: 404,
           message: `invalid id: family does not exist`,
           data: null,
@@ -260,14 +258,14 @@ export class FamilyService {
             code: 'family_not_found',
             message: `family with id ${familyId} not found`,
           },
-        });
+        };
       } else {
-        return (response = {
+        return <IResponse>{
           statusCode: 200,
           message: `family fetched successfully`,
           data: family,
           error: null,
-        });
+        };
       }
     } catch (err) {
       console.log(err);
@@ -277,7 +275,7 @@ export class FamilyService {
           JSON.stringify(err, null, 2),
       );
 
-      return (response = {
+      return <IResponse>{
         statusCode: 400,
         message: `error fetching family with id: [${familyId}]`,
         data: null,
@@ -287,7 +285,7 @@ export class FamilyService {
             `an unexpected error occurred while processing the request: error ` +
             JSON.stringify(err, null, 2),
         },
-      });
+      };
     }
   }
 
@@ -512,13 +510,23 @@ export class FamilyService {
   Get back to this, family members can all update family bio/wikipedia but 
   who's got the right to update other family records. THE CREATOR?
   */
-  async updateFamily(familyId: any, updateFamilyDto: Partial<CreateFamilyDto>) {
-    let response: IResponse;
-
+  async updateFamily(
+    userId: Types.ObjectId,
+    familyId: Types.ObjectId,
+    updateFamilyDto: Partial<CreateFamilyDto>,
+  ) {
     try {
       const family = await this.getFamilyById(familyId);
       if (!family.data || family.data === null) {
-        return (response = family);
+        return family;
+      }
+
+      this.logger.log(`testing req.body for family wiki...`);
+      if (updateFamilyDto.familyBio) {
+        await this.updateFamilyWiki(userId, {
+          familyId,
+          wiki: updateFamilyDto.familyBio,
+        });
       }
 
       const updated = await this.familyModel.findOneAndUpdate(
@@ -527,12 +535,12 @@ export class FamilyService {
         { new: true },
       );
 
-      return (response = {
+      return <IResponse>{
         statusCode: 200,
         message: 'family updated successfully',
         data: updated,
         error: null,
-      });
+      };
     } catch (err) {
       console.log(err);
 
@@ -540,7 +548,7 @@ export class FamilyService {
         `error updating family: ` + JSON.stringify(err, null, 2),
       );
 
-      return (response = {
+      return <IResponse>{
         statusCode: 400,
         message: 'family update failed',
         data: null,
@@ -550,7 +558,7 @@ export class FamilyService {
             `an unexpected error occurred while processing the request: error ` +
             JSON.stringify(err, null, 2),
         },
-      });
+      };
     }
   }
 
@@ -780,7 +788,10 @@ export class FamilyService {
           select: 'familyName familyUsername',
         });
 
-      if (isSelectedRootAlreadyRooted) {
+      if (
+        isSelectedRootAlreadyRooted &&
+        isSelectedRootAlreadyRooted.familyRootedTo
+      ) {
         return <IResponse>{
           statusCode: 400,
           message: `user selectd as root is already a root in ${isSelectedRootAlreadyRooted.familyRootedTo?.familyName} family, consider joining the family instead`,
@@ -838,11 +849,13 @@ export class FamilyService {
         familyCoverImage: familyCoverImageURL,
         familyUsername: familyUserName,
         members: [
-          initFamilyMembers[0]._id,
-          ...(newInActiveParent ? [initFamilyMembers[1]._id] : []),
+          new mongoose.Types.ObjectId(initFamilyMembers[0]._id),
           ...(newInActiveParent
-            ? [initFamilyMembers[2]._id]
-            : [initFamilyMembers[1]._id]),
+            ? [new mongoose.Types.ObjectId(initFamilyMembers[1]._id)]
+            : []),
+          ...(newInActiveParent
+            ? [new mongoose.Types.ObjectId(initFamilyMembers[2]._id)]
+            : [new mongoose.Types.ObjectId(initFamilyMembers[1]._id)]),
         ],
         familyJoinLink: generateJoinLink(familyUserName, createFamilyDto.state),
       });
@@ -904,10 +917,28 @@ export class FamilyService {
       ];
       await this.primaryUserModel.bulkWrite(userUpdates);
 
+      this.logger.log(`creating wiki details for new family...`);
+      const canEdit = [
+        new Types.ObjectId(createFamilyDto.root),
+        new Types.ObjectId(createFamilyDto.creator),
+        newInActiveParent
+          ? new Types.ObjectId(newInActiveParent._id)
+          : undefined,
+      ].filter(Boolean); // Remove undefined values
+
+      await this.createFamilyWiki({
+        familyId: newFamily._id,
+        wiki: createFamilyDto.familyBio,
+        editors: canEdit,
+      });
+
+      this.logger.log(`populating all family collections...`);
+      const familyPopulated = await this.getFamilyById(newFamily._id);
+
       return <IResponse>{
         statusCode: 201,
         message: `${createFamilyDto.familyName} family created successfully`,
-        data: newFamily,
+        data: familyPopulated,
         error: null,
       };
     } catch (err) {
@@ -1063,10 +1094,28 @@ export class FamilyService {
       ];
       await this.primaryUserModel.bulkWrite(userUpdates);
 
+      this.logger.log(`creating wiki details for new family...`);
+      const canEdit = [
+        new Types.ObjectId(newRoot._id),
+        new Types.ObjectId(createFamilyDto.creator),
+        newInActiveParent
+          ? new Types.ObjectId(newInActiveParent._id)
+          : undefined,
+      ].filter(Boolean); // Remove undefined values
+
+      await this.createFamilyWiki({
+        familyId: newFamily._id,
+        wiki: createFamilyDto.familyBio,
+        editors: canEdit,
+      });
+
+      this.logger.log(`populating all family collections...`);
+      const familyPopulated = await this.getFamilyById(newFamily._id);
+
       return <IResponse>{
         statusCode: 201,
         message: `${createFamilyDto.familyName} family created successfully`,
-        data: newFamily,
+        data: familyPopulated,
         error: null,
       };
     } catch (err) {
@@ -1121,5 +1170,51 @@ export class FamilyService {
     }
 
     return null;
+  }
+
+  private async createFamilyWiki(dto: CreateFamilyWikiDto) {
+    try {
+      const newWiki = await this.familyWikiModel.create({
+        family: new mongoose.Types.ObjectId(dto.familyId),
+        wiki: dto.wiki,
+        editors: [...dto.editors],
+      });
+
+      if (!newWiki) return null;
+      await this.familyModel.findOneAndUpdate(
+        { _id: new mongoose.Types.ObjectId(dto.familyId) },
+        { $set: { wiki: newWiki._id } },
+        { new: true },
+      );
+    } catch (err) {
+      console.error(
+        `Error creating family wiki for family with ID [${dto.familyId}]: ` +
+          err,
+      );
+
+      throw err;
+    }
+  }
+
+  private async updateFamilyWiki(
+    userId: Types.ObjectId,
+    dto: Partial<CreateFamilyWikiDto>,
+  ) {
+    try {
+      this.logger.log(`updating family wiki...`);
+      await this.familyWikiModel.findOneAndUpdate(
+        { family: new mongoose.Types.ObjectId(dto.familyId) },
+        { $set: { wiki: dto.wiki, latestEditor: userId } },
+        { new: true },
+      );
+      this.logger.log(`family wiki updated successfully`);
+    } catch (err) {
+      console.error(
+        `Error editing family wiki for family with ID [${dto.familyId}]: ` +
+          err,
+      );
+
+      throw err;
+    }
   }
 }

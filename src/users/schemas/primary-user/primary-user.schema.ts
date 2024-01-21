@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, ObjectId } from 'mongoose';
+import { HydratedDocument, Schema as MongooseSchema } from 'mongoose';
 import { Family } from 'src/family/schemas';
+import { PrimaryUserWiki } from './user-wiki.schema';
 
 export type PrimaryUserDocument = HydratedDocument<PrimaryUser>;
 
@@ -42,6 +43,9 @@ export class PrimaryUser {
   @Prop({ type: 'ObjectId', ref: 'PrimaryUser' })
   creator?: PrimaryUser;
 
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'PrimaryUserWiki' })
+  wiki: PrimaryUserWiki;
+
   @Prop({ default: false })
   deleted: boolean;
 
@@ -50,3 +54,9 @@ export class PrimaryUser {
 }
 
 export const PrimaryUserSchema = SchemaFactory.createForClass(PrimaryUser);
+
+// PrimaryUserSchema.virtual('membersCount').get(function () {
+//   return this.families.map(function (family) {
+//     return family.members.length;
+//   });
+// });

@@ -6,3 +6,4 @@ export * from './validate-familytype-unique.dto';
 export * from './validate-familytype-unique.dto';
 export * from './update-family-member.dto';
 export * from './get-potential-root-link.dto';
+export * from './create-family-wiki.dto';

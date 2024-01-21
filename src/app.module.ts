@@ -10,7 +10,12 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { JwtStrategy } from './auth/strategies';
 import { PrimaryUserService } from './users/services';
 import { MongooseModule } from '@nestjs/mongoose';
-import { PrimaryUser, PrimaryUserSchema } from './users/schemas';
+import {
+  PrimaryUser,
+  PrimaryUserSchema,
+  PrimaryUserWiki,
+  PrimaryUserWikiSchema,
+} from './users/schemas';
 import { PrimaryUserController } from './users/controllers';
 import { FamilyModule } from './family/family.module';
 import { ChatModule } from './chat/chat.module';
@@ -23,6 +28,7 @@ import { DefaultModule } from './default/default.module';
     ConfigModule.forRoot({ isGlobal: true }),
     MongooseModule.forFeature([
       { name: PrimaryUser.name, schema: PrimaryUserSchema },
+      { name: PrimaryUserWiki.name, schema: PrimaryUserWikiSchema },
     ]),
     ThrottlerModule.forRoot(),
     AuthModule,
