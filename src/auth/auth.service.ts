@@ -25,8 +25,6 @@ export class AuthService {
   ) {}
 
   async signin(dto: DefaultSignInDto): Promise<IResponse> {
-    let response: IResponse;
-    const { email, password } = dto;
     this.logger.log(`checking user in primary users collections...`);
 
     const loginIdentifier = dto.email
@@ -37,56 +35,73 @@ export class AuthService {
 
     console.log('LOGIN_IDENT:', loginIdentifier);
 
-    const user = await this.primaryUser.findOne(loginIdentifier);
+    try {
+      const user = await this.primaryUser
+        .findOne(loginIdentifier)
+        .select('password');
 
-    // TODO: check user in admin collection
-
-    if (user === undefined || user === null) {
-      return (response = {
-        statusCode: 404,
-        message: `user with this ${
-          Object.keys(loginIdentifier)[0]
-        } does not exist`,
-        data: null,
-        error: {
-          code: 'user_not_found',
-          message: `no user with this ${
+      if (!user) {
+        return <IResponse>{
+          statusCode: 404,
+          message: `user with this ${
             Object.keys(loginIdentifier)[0]
-          } was found`,
-        },
-      });
-    } else {
-      const passMatches = await argon2.verify(user.password, password);
-
-      if (!passMatches) {
-        return (response = {
-          statusCode: 400,
-          message: 'invalid login credentials',
+          } does not exist`,
           data: null,
           error: {
-            code: 'incorrect_password',
-            message: `invalid login credentials`,
+            code: 'user_not_found',
+            message: `no user with this ${
+              Object.keys(loginIdentifier)[0]
+            } was found`,
           },
-        });
+        };
       } else {
-        const tokens = HelperFn.signJwtToken(user._id);
-        // this.logger.log(`updating refresh...`);
-        // await this.updateRefreshToken(user._id, tokens.refreshToken);
+        const passMatches = await argon2.verify(user.password, dto.password);
 
-        return (response = {
-          statusCode: 200,
-          message: 'signed in successfully',
-          data: tokens,
-          error: null,
-        });
+        if (!passMatches) {
+          return <IResponse>{
+            statusCode: 400,
+            message: 'invalid login credentials',
+            data: null,
+            error: {
+              code: 'incorrect_password',
+              message: `invalid login credentials`,
+            },
+          };
+        } else {
+          const tokens = HelperFn.signJwtToken(user._id);
+          // this.logger.log(`updating refresh...`);
+          // await this.updateRefreshToken(user._id, tokens.refreshToken);
+
+          return <IResponse>{
+            statusCode: 200,
+            message: 'signed in successfully',
+            data: tokens,
+            error: null,
+          };
+        }
       }
+    } catch (err) {
+      console.log(err);
+
+      this.logger.error(`primary user login failed` + JSON.stringify(err));
+
+      return <IResponse>{
+        statusCode: 400,
+        message: 'primary user login failed',
+        data: null,
+        error: {
+          code: 'primary_user_login_failed',
+          message:
+            `an unexpected error occurred while processing the request: error ` +
+            err,
+        },
+      };
     }
   }
 
   async forgotPassword(
     forgotPasswordDto: ForgotPasswordDto,
   ): Promise<IResponse> {
-    let response: IResponse;
     const { email } = forgotPasswordDto;
     try {
       const user = await this.primaryUser.findOne({
@@ -94,7 +109,7 @@ export class AuthService {
       });
 
       if (!user)
-        return (response = {
+        return <IResponse>{
           statusCode: 404,
           message: 'user with this mail does not exist',
           data: null,
@@ -102,7 +117,7 @@ export class AuthService {
             code: 'user_not_found',
             message: `no user with email ${email} was found`,
           },
-        });
+        };
 
       const otp = getRandomDigits(6);
       const secretTokenExpiration = HelperFn.signJwtToken(user._id, '10min');
@@ -122,12 +137,12 @@ export class AuthService {
         );
       }
 
-      return (response = {
+      return <IResponse>{
         statusCode: 200,
         message: 'password reset mail sent successfully',
         data: null,
         error: null,
-      });
+      };
     } catch (err) {
       console.log(err);
 
@@ -136,9 +151,9 @@ export class AuthService {
           JSON.stringify(err, null, 2),
       );
 
-      return (response = {
+      return <IResponse>{
         statusCode: 400,
-        message: 'password mail sending failed',
+        message: 'password reset mail sending failed',
         data: null,
         error: {
           code: 'pasword_reset_failed',
@@ -146,24 +161,27 @@ export class AuthService {
             `an unexpected error occurred while processing the request: error ` +
             JSON.stringify(err, null, 2),
         },
-      });
+      };
     }
   }
 
   async resetPassword(passwordResetDto: PasswordResetDto) {
-    let response: IResponse;
     const { otp, password } = passwordResetDto;
 
     try {
-      let userWithOtp: PrimaryUserDocument;
-      userWithOtp = await this.primaryUser.findOne({ secretToken: otp });
+      let userWithOtp = await this.primaryUser
+        .findOne({
+          secretToken: otp,
+        })
+        .select('role, email, userName');
+
       if (!userWithOtp) {
-        return (response = {
+        return <IResponse>{
           statusCode: 404,
           message: 'invalid otp code',
           data: null,
           error: null,
-        });
+        };
       }
 
       if (userWithOtp.role === 'primaryuser') {
@@ -181,10 +199,13 @@ export class AuthService {
         userWithOtp.userName,
       );
 
-      return {
+      // Alternatively, generate authorization token and log user in
+      // const tokens = HelperFn.signJwtToken(userWithOtp._id);
+
+      return <IResponse>{
         statusCode: 200,
-        message: 'Password reset successfully',
-        data: userWithOtp,
+        message: 'password reset successfully',
+        data: null,
         error: null,
       };
     } catch (err) {
@@ -192,7 +213,7 @@ export class AuthService {
 
       this.logger.error(`error resetting password: ` + JSON.stringify(err));
 
-      return {
+      return <IResponse>{
         statusCode: 400,
         message: 'password reset failed',
         data: null,
@@ -207,17 +228,14 @@ export class AuthService {
   }
 
   async resendOtp(forgotPasswordDto: ForgotPasswordDto) {
-    let response: IResponse;
-    let userWithMail;
-
     const { email } = forgotPasswordDto;
 
-    userWithMail = await this.primaryUserService.findUserByEmail(
+    const userWithMail = await this.primaryUserService.findUserByEmail(
       forgotPasswordDto.email,
     );
 
     if (!userWithMail.data) {
-      return {
+      return <IResponse>{
         statusCode: 404,
         message: `invalid email address`,
         data: null,
@@ -229,7 +247,7 @@ export class AuthService {
     }
 
     if (userWithMail.data.secretToken == null) {
-      return (response = {
+      return <IResponse>{
         statusCode: 400,
         message: `user has no otp set`,
         data: null,
@@ -237,7 +255,7 @@ export class AuthService {
           code: 'user_no_otp',
           message: `user has not requested any otp service`,
         },
-      });
+      };
     }
 
     this.logger.log(`generating user otp...`);
@@ -248,7 +266,7 @@ export class AuthService {
 
     try {
       this.logger.log(`updating user with new code...`);
-      if (userWithMail.role === 'primaryuser') {
+      if (userWithMail.data.role === 'primaryuser') {
         await this.primaryUser.findOneAndUpdate(
           { _id: userWithMail.data._id },
           { $set: { secretToken: otp } },
@@ -256,7 +274,7 @@ export class AuthService {
         );
       }
 
-      return {
+      return <IResponse>{
         statusCode: 200,
         message: 'otp code resent successfully',
         data: null,
@@ -267,7 +285,7 @@ export class AuthService {
         `error resending otp code: ` + JSON.stringify(err, null, 2),
       );
 
-      return {
+      return <IResponse>{
         statusCode: 400,
         message: 'OTP code resend failed',
         data: null,
@@ -282,38 +300,36 @@ export class AuthService {
   }
 
   async validateOtp(otp: string): Promise<IResponse> {
-    let response: IResponse;
-
     try {
       const userWithOtp = await this.primaryUser.findOne({ secretToken: otp });
 
       if (!userWithOtp) {
-        return (response = {
+        return <IResponse>{
           statusCode: 400,
           message: `invalid otp, request for a new one`,
           data: false,
           error: null,
-        });
+        };
       }
       const isNotExpiredOtp = HelperFn.verifyTokenExpiration(
         userWithOtp.secretTokenExpiration,
       );
 
       if ('data' in isNotExpiredOtp && isNotExpiredOtp.data === false) {
-        return (response = {
+        return <IResponse>{
           statusCode: 400,
           message: `expired otp, request for a new one`,
           data: false,
           error: null,
-        });
+        };
       }
 
-      return (response = {
+      return <IResponse>{
         statusCode: 200,
         message: `otp valid`,
         data: true,
         error: null,
-      });
+      };
     } catch (err) {
       console.log(err);
 
@@ -322,17 +338,17 @@ export class AuthService {
           JSON.stringify(err, null, 2),
       );
 
-      return (response = {
+      return <IResponse>{
         statusCode: 400,
         message: `error validating otp: [${otp}]`,
         data: null,
         error: {
-          code: 'otp_verify_failed',
+          code: 'otp_verification_failed',
           message:
             `an unexpected error occurred while processing the request: error ` +
             JSON.stringify(err, null, 2),
         },
-      });
+      };
     }
   }
 }

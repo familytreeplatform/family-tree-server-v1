@@ -1,16 +1,21 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { PrimaryUser, PrimaryUserDocument } from '../schemas';
-import { Model } from 'mongoose';
+import {
+  PrimaryUser,
+  PrimaryUserDocument,
+  PrimaryUserWiki,
+  PrimaryuserWikiDocument,
+} from '../schemas';
+import { Model, Types } from 'mongoose';
 import * as argon2 from 'argon2';
 import { IResponse } from 'src/interfaces';
 import {
   CreatePrimaryUserDto,
+  CreatePrimaryUserWikiDto,
   UpdatePrimaryUserDto,
   searchUserDto,
 } from '../dto';
 import { welcomeMail } from 'src/templates/mails';
-import { DospacesService } from 'src/dospaces/dospaces.service';
 import { Throttle } from '@nestjs/throttler';
 import { HelperFn } from 'src/common/helpers/helper-fn';
 
@@ -21,33 +26,35 @@ export class PrimaryUserService {
   constructor(
     @InjectModel(PrimaryUser.name)
     private primaryUserModel: Model<PrimaryUserDocument>,
-    private readonly doSpacesService: DospacesService,
+    @InjectModel(PrimaryUserWiki.name)
+    private primaryUserWikiModel: Model<PrimaryuserWikiDocument>,
   ) {}
 
   async findUserByEmail(email: string): Promise<IResponse> {
     this.logger.log(`lookup user with email: [${email}]...`);
-    let response: IResponse;
 
     try {
-      const user = await this.primaryUserModel.findOne({ email });
+      const user = await (
+        await this.primaryUserModel.findOne({ email })
+      ).populate('wiki');
 
       if (!user) {
-        return (response = {
+        return <IResponse>{
           statusCode: 404,
-          message: `no user found with email`,
+          message: `no user found with this email`,
           data: null,
           error: {
             code: 'user_not_found',
             message: `user with email ${email} not found`,
           },
-        });
+        };
       } else {
-        return (response = {
+        return <IResponse>{
           statusCode: 200,
           message: `user fetched successfully`,
           data: user,
           error: null,
-        });
+        };
       }
     } catch (err) {
       this.logger.error(
@@ -55,7 +62,7 @@ export class PrimaryUserService {
           JSON.stringify(err, null, 2),
       );
 
-      return (response = {
+      return <IResponse>{
         statusCode: 400,
         message: `error fetching user with email: [${email}]`,
         data: null,
@@ -65,35 +72,59 @@ export class PrimaryUserService {
             `an unexpected error occurred while processing the request: error ` +
             JSON.stringify(err, null, 2),
         },
-      });
+      };
     }
   }
 
   async getUserById(userId: any): Promise<IResponse> {
     this.logger.log(`lookup user with id: [${userId}]...`);
-    let response: IResponse;
 
     try {
-      const user = await this.primaryUserModel.findOne({ _id: userId });
+      const user = await this.primaryUserModel
+        .findOne({ _id: userId })
+        .select('families')
+        .populate({
+          path: 'families',
+          select: 'familyName familyUsername familyCoverImage members wiki',
+          populate: [
+            {
+              path: 'members',
+              select: 'relationshipToRoot familyType user',
+              populate: {
+                path: 'user',
+                select: 'fullName gender profilePic wiki',
+                populate: {
+                  path: 'wiki',
+                },
+              },
+            },
+            { path: 'wiki' },
+          ],
+        });
 
       if (!user) {
-        return (response = {
+        return <IResponse>{
           statusCode: 404,
           message: `invalid id: user does not exist`,
           data: null,
           error: {
             code: 'user_not_found',
-            message: `user with id ${userId} not found`,
+            message: `user with id [${userId}] not found`,
           },
-        });
+        };
       } else {
-        user.password = null;
-        return (response = {
+        user.password = undefined;
+
+        user.families.map((family) => {
+          return (family.membersCount = family.members.length);
+        });
+
+        return <IResponse>{
           statusCode: 200,
           message: `user fetched successfully`,
           data: user,
           error: null,
-        });
+        };
       }
     } catch (err) {
       console.log(err);
@@ -103,7 +134,7 @@ export class PrimaryUserService {
           JSON.stringify(err, null, 2),
       );
 
-      return (response = {
+      return <IResponse>{
         statusCode: 400,
         message: `error fetching user with id: [${userId}]`,
         data: null,
@@ -113,7 +144,7 @@ export class PrimaryUserService {
             `an unexpected error occurred while processing the request: error ` +
             JSON.stringify(err, null, 2),
         },
-      });
+      };
     }
   }
 
@@ -168,18 +199,13 @@ export class PrimaryUserService {
 
   async signup(createPrimaryUserDto: CreatePrimaryUserDto): Promise<IResponse> {
     const { email, password, fullName } = createPrimaryUserDto;
+    let userWithPhone: IResponse;
 
-    let isUniquePhone = false;
     if (createPrimaryUserDto.phone) {
-      const userWithPhone = await this.validatePhone(
-        createPrimaryUserDto.phone,
-      );
-
-      isUniquePhone = userWithPhone.data;
+      userWithPhone = await this.validatePhone(createPrimaryUserDto.phone);
     }
-    console.log('IS_UNIQUE_PHONE', isUniquePhone);
 
-    if (!isUniquePhone) {
+    if (!userWithPhone.data) {
       return <IResponse>{
         statusCode: 400,
         message: `user with this phone number already exist`,
@@ -232,55 +258,63 @@ export class PrimaryUserService {
   }
 
   async updateUser(userId: any, updatePrimaryUserDto: UpdatePrimaryUserDto) {
-    let response: IResponse;
+    let validatePhoneUnique: IResponse;
 
-    let validatePhoneUnique: PrimaryUserDocument;
+    this.logger.log(`testing and validating req.body phone number uniqueness`);
     if (updatePrimaryUserDto.phone) {
-      validatePhoneUnique = await this.primaryUserModel.findOne({
-        phone: updatePrimaryUserDto.phone,
-      });
+      validatePhoneUnique = await this.validatePhone(
+        updatePrimaryUserDto.phone,
+      );
     }
 
-    if (validatePhoneUnique) {
-      return (response = {
+    if (!validatePhoneUnique.data) {
+      return <IResponse>{
         statusCode: 400,
         message: 'phone number already exists',
         data: null,
         error: null,
-      });
+      };
     }
 
-    try {
-      const user = await this.getUserById(userId);
-      if (!user.data || user.data === null) {
-        return (response = user);
-      }
-
-      if (updatePrimaryUserDto.password) {
-        updatePrimaryUserDto.password = await argon2.hash(
-          updatePrimaryUserDto.password,
-        );
-      }
-
-      const updated = await this.primaryUserModel.findOneAndUpdate(
-        { _id: userId },
-        { $set: updatePrimaryUserDto },
-        { new: true },
+    this.logger.log(`testing req.body for password field... `);
+    if (updatePrimaryUserDto.password) {
+      updatePrimaryUserDto.password = await argon2.hash(
+        updatePrimaryUserDto.password,
       );
+    }
+
+    this.logger.log(`testing req.body for wiki field...`);
+    if (updatePrimaryUserDto.wiki) {
+      await this.createUserWiki({
+        userId: userId.toString(),
+        wiki: updatePrimaryUserDto.wiki,
+      });
+    }
+    delete updatePrimaryUserDto.wiki;
+
+    try {
+      this.logger.log(`updating user document...`);
+      const updated = await this.primaryUserModel
+        .findOneAndUpdate(
+          { _id: userId },
+          { $set: updatePrimaryUserDto },
+          { new: true },
+        )
+        .populate('wiki');
 
       updated.password = null;
-      return (response = {
+      return <IResponse>{
         statusCode: 200,
         message: 'user updated successfully',
         data: updated,
         error: null,
-      });
+      };
     } catch (err) {
       console.log(err);
 
       this.logger.error(`error updating user: ` + JSON.stringify(err, null, 2));
 
-      return (response = {
+      return <IResponse>{
         statusCode: 400,
         message: 'user update failed',
         data: null,
@@ -290,7 +324,7 @@ export class PrimaryUserService {
             `an unexpected error occurred while processing the request: error ` +
             JSON.stringify(err, null, 2),
         },
-      });
+      };
     }
   }
 
@@ -375,25 +409,23 @@ export class PrimaryUserService {
   }
 
   async validateUserName(userName: string): Promise<IResponse> {
-    let response: IResponse;
-
     try {
       const isValidUserName = await this.primaryUserModel.findOne({ userName });
 
       if (!isValidUserName) {
-        return (response = {
+        return <IResponse>{
           statusCode: 200,
           message: `username available`,
           data: true,
           error: null,
-        });
+        };
       }
-      return (response = {
+      return <IResponse>{
         statusCode: 409,
-        message: `username taken`,
+        message: `username ${userName} is taken`,
         data: false,
         error: null,
-      });
+      };
     } catch (err) {
       console.log(err);
 
@@ -402,7 +434,7 @@ export class PrimaryUserService {
           JSON.stringify(err, null, 2),
       );
 
-      return (response = {
+      return <IResponse>{
         statusCode: 400,
         message: `error validating username: [${userName}]`,
         data: null,
@@ -412,7 +444,31 @@ export class PrimaryUserService {
             `an unexpected error occurred while processing the request: error ` +
             JSON.stringify(err, null, 2),
         },
+      };
+    }
+  }
+
+  private async createUserWiki(dto: CreatePrimaryUserWikiDto) {
+    console.log('WIKI', dto);
+
+    try {
+      const newWiki = await this.primaryUserWikiModel.create({
+        user: new Types.ObjectId(dto.userId),
+        wiki: dto.wiki,
       });
+
+      if (!newWiki) return null;
+      await this.primaryUserModel.findOneAndUpdate(
+        { _id: new Types.ObjectId(dto.userId) },
+        { $set: { wiki: newWiki._id } },
+        { new: true },
+      );
+    } catch (err) {
+      console.error(
+        `Error creating user wiki for family with ID [${dto.userId}]: ` + err,
+      );
+
+      throw err;
     }
   }
 }

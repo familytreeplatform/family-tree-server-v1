@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument } from 'mongoose';
+import { HydratedDocument, Schema as MongooseSchema } from 'mongoose';
 import { PrimaryUser } from 'src/users/schemas';
-import { FamilyMember } from './family-member.schema';
+import { FamilyMember, FamilyWiki } from '.';
 
 export type FamilyDocument = HydratedDocument<Family>;
 
@@ -26,9 +26,6 @@ export class Family {
   tribe: string;
 
   @Prop({ required: true })
-  familyBio: string;
-
-  @Prop({ required: true })
   familyUsername: string;
 
   @Prop({
@@ -45,6 +42,16 @@ export class Family {
 
   @Prop({ ref: 'FamilyMember' })
   members: FamilyMember[];
+
+  @Prop({ type: Number })
+  membersCount: number;
+
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'FamilyWiki' })
+  wiki: FamilyWiki;
 }
 
 export const FamilySchema = SchemaFactory.createForClass(Family);
+
+// FamilySchema.virtual('membersCount').get(function () {
+//   return this.members.length;
+// });

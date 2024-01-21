@@ -48,7 +48,7 @@ export class UpdatePrimaryUserDto {
 
   @IsOptional()
   @IsString()
-  about?: string;
+  wiki?: string;
 
   @IsOptional()
   @IsString()
