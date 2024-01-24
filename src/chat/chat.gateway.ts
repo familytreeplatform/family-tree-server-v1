@@ -8,8 +8,8 @@ import {
 } from '@nestjs/websockets';
 import { Socket } from 'socket.io';
 import { ObjectId } from 'mongoose';
-import { ChatService } from './chat.service';
 import { MessageDto } from './dto';
+import { ChatService } from './chat.service';
 
 @WebSocketGateway({
   cors: {
@@ -24,8 +24,6 @@ export class ChatGateway implements OnGatewayConnection {
   constructor(private chat: ChatService) {}
 
   async handleConnection(socket: Socket) {
-    console.log('SOCKET_CONNECT', socket);
-
     const userId = await this.chat.getUserFromSocket(socket);
     console.log('USER_ID_FROM_SOCKET', userId);
 
@@ -48,7 +46,7 @@ export class ChatGateway implements OnGatewayConnection {
     const receiverSocketId = this.store.get(dto.toId as ObjectId);
 
     console.log('SENDER_ID', senderId);
-    console.log('RECEIVER_SOCKET_ID', senderId);
+    console.log('RECEIVER_SOCKET_ID', receiverSocketId);
 
     //store message in DB
     await this.chat.saveMessage(senderId, dto.toId as ObjectId, dto.message);
