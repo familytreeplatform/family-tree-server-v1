@@ -73,11 +73,13 @@ export class ChatService {
 
     const conversationSummary: ConversationSummaryType = conversations.map(
       (conversation) => {
-        const lastMessage = conversation.messages[conversation.messages.length - 1];
+        const lastMessage =
+          conversation.messages[conversation.messages.length - 1];
 
         return {
           conversationId: conversation.id,
           lastMessage: lastMessage ? lastMessage.content : '',
+          userId,
           usernames: [
             conversation.initiator.userName,
             conversation.participant.userName,
@@ -91,35 +93,37 @@ export class ChatService {
   }
 
   async getMessages(dto: GetMessagesDto) {
-    const skip: number = (dto.pageNo - 1) * dto.pageSize
+    const skip: number = (dto.pageNo - 1) * dto.pageSize;
 
-    const messages = await this.Message
-    .find({conversation: dto.id})
-    .sort({timestamp: -1})
-    .skip(skip)
-    .limit(dto.pageSize)
-    .exec()
+    const messages = await this.Message.find({ conversation: dto.id })
+      .sort({ timestamp: -1 })
+      .skip(skip)
+      .limit(dto.pageSize)
+      .exec();
 
-    return messages.map((message) => (
-      {
+    return messages.map((message) => ({
       messageId: message.id,
       content: message.content,
       from: message.fromId,
       to: message.toId,
-      timestamp: message.timestamp
-    }))
+      timestamp: message.timestamp,
+    }));
   }
 
   async getUserFromSocket(socket: Socket) {
-    let payload: { sub: any };
-    let auth_token: string = socket.handshake.headers.authorization;
+    const auth_token: string = socket.handshake.headers.authorization;
 
     if (!auth_token)
-      throw new WsException('Please provide an authorization token');
+      throw new WsException('session expired, login to continue your chats');
 
-    auth_token = auth_token.split(' ')[1];
+    const split_auth_token = auth_token.split(' ')[1];
 
-    if (auth_token) payload = HelperFn.verifyJwtToken(auth_token);
+    if (!split_auth_token)
+      throw new WsException('invalid token, login to request a new one');
+
+    const payload = HelperFn.verifyJwtToken(split_auth_token);
+
+    console.log('CHAT_AUTH_TOKEN_VERIFY_DECODE', payload);
 
     return payload.sub;
   }

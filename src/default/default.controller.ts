@@ -1,14 +1,20 @@
 import {
   Body,
   Controller,
+  HttpCode,
   HttpException,
+  Patch,
   Post,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { DefaultService } from './default.service';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { UploadFileTypeDto } from './dto';
+import { UpdateUserGlobalSettings, UploadFileTypeDto } from './dto';
+import { Types } from 'mongoose';
+import { GetUser } from 'src/common/decorators';
+import { JwtGuard } from 'src/common/guards';
 
 @Controller('default')
 export class DefaultController {
@@ -35,5 +41,18 @@ export class DefaultController {
     }
 
     return await this.defaultService.uploadFile(file, uploadFileTypeDto.folder);
+  }
+
+  @UseGuards(JwtGuard)
+  @Patch('update-global-settings')
+  @HttpCode(200)
+  async updateGlobalSettings(
+    @Body() dto: UpdateUserGlobalSettings,
+    @GetUser('_id') userId: any,
+  ): Promise<object> {
+    return await this.defaultService.updateGlobalSettings({
+      ...dto,
+      userId: new Types.ObjectId(userId),
+    });
   }
 }
