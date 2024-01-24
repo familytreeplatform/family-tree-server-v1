@@ -11,7 +11,7 @@ async function bootstrap() {
     bootstrap.name.charAt(0).toUpperCase() + bootstrap.name.slice(1),
   );
   const app = await NestFactory.create(AppModule);
-  app.useWebSocketAdapter(new WsAdapter(app));
+  // app.useWebSocketAdapter(new WsAdapter(app));
 
   Sentry.init({
     dsn: configService.get<string>('SENTRY_DSN'),
