@@ -8,12 +8,17 @@ import {
   PrimaryUserWiki,
   PrimaryUserWikiSchema,
 } from './schemas';
+import { GlobalSettings, GlobalSettingsSchema } from 'src/default/schemas';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: PrimaryUser.name, schema: PrimaryUserSchema },
       { name: PrimaryUserWiki.name, schema: PrimaryUserWikiSchema },
+      {
+        name: GlobalSettings.name,
+        schema: GlobalSettingsSchema,
+      },
     ]),
   ],
   providers: [PrimaryUserService],

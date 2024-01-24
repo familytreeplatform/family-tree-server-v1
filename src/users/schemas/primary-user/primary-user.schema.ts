@@ -1,7 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Schema as MongooseSchema } from 'mongoose';
 import { Family } from 'src/family/schemas';
-import { PrimaryUserWiki } from './user-wiki.schema';
+import { PrimaryUserWiki } from '..';
+import { GlobalSettings } from 'src/default/schemas';
 
 export type PrimaryUserDocument = HydratedDocument<PrimaryUser>;
 
@@ -45,6 +46,12 @@ export class PrimaryUser {
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'PrimaryUserWiki' })
   wiki: PrimaryUserWiki;
+
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'PrimaryUseGlobalSettings',
+  })
+  globalSettings: GlobalSettings;
 
   @Prop({ default: false })
   deleted: boolean;

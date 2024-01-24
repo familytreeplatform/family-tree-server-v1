@@ -22,6 +22,7 @@ import { ChatModule } from './chat/chat.module';
 import { DospacesModule } from './dospaces/dospaces.module';
 import { SentryInterceptor } from './common/interceptors/sentry.interceptor';
 import { DefaultModule } from './default/default.module';
+import { GlobalSettings, GlobalSettingsSchema } from './default/schemas';
 
 @Module({
   imports: [
@@ -29,6 +30,10 @@ import { DefaultModule } from './default/default.module';
     MongooseModule.forFeature([
       { name: PrimaryUser.name, schema: PrimaryUserSchema },
       { name: PrimaryUserWiki.name, schema: PrimaryUserWikiSchema },
+      {
+        name: GlobalSettings.name,
+        schema: GlobalSettingsSchema,
+      },
     ]),
     ThrottlerModule.forRoot(),
     AuthModule,

@@ -11,6 +11,7 @@ import {
 } from 'src/users/schemas';
 import { PrimaryUserService } from 'src/users/services';
 import { JwtStrategy } from './strategies';
+import { GlobalSettings, GlobalSettingsSchema } from 'src/default/schemas';
 
 @Module({
   imports: [
@@ -18,6 +19,10 @@ import { JwtStrategy } from './strategies';
     MongooseModule.forFeature([
       { name: PrimaryUser.name, schema: PrimaryUserSchema },
       { name: PrimaryUserWiki.name, schema: PrimaryUserWikiSchema },
+      {
+        name: GlobalSettings.name,
+        schema: GlobalSettingsSchema,
+      },
     ]),
   ],
   providers: [AuthService, PrimaryUserService, JwtStrategy],

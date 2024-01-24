@@ -18,6 +18,7 @@ import {
 import { welcomeMail } from 'src/templates/mails';
 import { Throttle } from '@nestjs/throttler';
 import { HelperFn } from 'src/common/helpers/helper-fn';
+import { GlobalSettings, GlobalSettingsDocument } from 'src/default/schemas';
 
 @Throttle({ default: { limit: 5, ttl: 60000 } })
 @Injectable()
@@ -28,6 +29,8 @@ export class PrimaryUserService {
     private primaryUserModel: Model<PrimaryUserDocument>,
     @InjectModel(PrimaryUserWiki.name)
     private primaryUserWikiModel: Model<PrimaryuserWikiDocument>,
+    @InjectModel(GlobalSettings.name)
+    private globalSettingsModel: Model<GlobalSettingsDocument>,
   ) {}
 
   async findUserByEmail(email: string): Promise<IResponse> {
@@ -82,7 +85,7 @@ export class PrimaryUserService {
     try {
       const user = await this.primaryUserModel
         .findOne({ _id: userId })
-        .select('families')
+        .select('families globalSettings')
         .populate({
           path: 'families',
           select: 'familyName familyUsername familyCoverImage members wiki',
@@ -224,6 +227,9 @@ export class PrimaryUserService {
           ...createPrimaryUserDto,
           password: await argon2.hash(password),
         });
+
+        this.logger.log(`initializing new user global settings...`);
+        await this.globalSettingsModel.create();
 
         await welcomeMail.mail(email, fullName);
         const tokens = HelperFn.signJwtToken(newUser._id);
