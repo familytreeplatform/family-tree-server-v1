@@ -5,6 +5,7 @@ import {
   OnGatewayConnection,
   SubscribeMessage,
   WebSocketGateway,
+  WsException,
 } from '@nestjs/websockets';
 import { Socket } from 'socket.io';
 import { ObjectId } from 'mongoose';
@@ -28,6 +29,7 @@ export class ChatGateway implements OnGatewayConnection {
     console.log('USER_ID_FROM_SOCKET', userId);
 
     this.store.set(userId, socket.id);
+    console.log('STORE', this.store);
 
     this.logger.log(`<io: ${socket.id}># a user connected`);
 
@@ -43,6 +45,11 @@ export class ChatGateway implements OnGatewayConnection {
     @ConnectedSocket() socket: Socket,
   ) {
     const senderId = (await this.chat.getUserFromSocket(socket)) as ObjectId;
+
+    if (!this.store.has(dto.toId)) {
+      this.logger.log(`user with id [${dto.toId}] not found in store`);
+      throw new WsException('user not online...');
+    }
     const receiverSocketId = this.store.get(dto.toId as ObjectId);
 
     console.log('SENDER_ID', senderId);

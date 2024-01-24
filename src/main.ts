@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as Sentry from '@sentry/node';
+import { WsAdapter } from '@nestjs/platform-ws';
 
 async function bootstrap() {
   const configService = new ConfigService();
@@ -10,6 +11,7 @@ async function bootstrap() {
     bootstrap.name.charAt(0).toUpperCase() + bootstrap.name.slice(1),
   );
   const app = await NestFactory.create(AppModule);
+  app.useWebSocketAdapter(new WsAdapter(app));
 
   Sentry.init({
     dsn: configService.get<string>('SENTRY_DSN'),
