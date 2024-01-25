@@ -5,7 +5,7 @@ import { Transform } from 'class-transformer';
 export class GetMessagesDto {
   @IsNotEmpty()
   @Transform(({ value }) => value as ObjectId)
-  id: ObjectId;
+  conversationId: ObjectId;
 
   @Transform(({ value }) => parseInt(value))
   @IsNumber()
