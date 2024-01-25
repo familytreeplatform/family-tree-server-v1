@@ -10,7 +10,7 @@ import {
 } from './schemas';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, ObjectId } from 'mongoose';
-import { ConversationSummaryType } from './types';
+import { ConversationSummaryType, ReceiverInfo } from './types';
 import { GetMessagesDto } from './dto';
 
 @Injectable()
@@ -76,14 +76,22 @@ export class ChatService {
         const lastMessage =
           conversation.messages[conversation.messages.length - 1];
 
+        //Logic to get other participant in conversations username
+        let receiverInfo: ReceiverInfo =
+          userId === (conversation.initiator as any).id
+            ? {
+                username: conversation.participant.userName,
+                profilePic: conversation.participant.profilePic,
+              }
+            : {
+                username: conversation.initiator.userName,
+                profilePic: conversation.initiator.profilePic,
+              };
+
         return {
           conversationId: conversation.id,
           lastMessage: lastMessage ? lastMessage.content : '',
-          userId,
-          usernames: [
-            conversation.initiator.userName,
-            conversation.participant.userName,
-          ],
+          receiverInfo,
           timestamp: lastMessage ? lastMessage.timestamp : null,
         };
       },
@@ -95,7 +103,9 @@ export class ChatService {
   async getMessages(dto: GetMessagesDto) {
     const skip: number = (dto.pageNo - 1) * dto.pageSize;
 
-    const messages = await this.Message.find({ conversation: dto.id })
+    const messages = await this.Message.find({
+      conversation: dto.conversationId,
+    })
       .sort({ timestamp: -1 })
       .skip(skip)
       .limit(dto.pageSize)
