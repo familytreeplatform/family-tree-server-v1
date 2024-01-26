@@ -7,7 +7,20 @@ export type ConversationSummaryType = {
   timestamp: Date;
 }[];
 
+export type MessageSummaryType = {
+  messageId: Object;
+  content: string;
+  from: UserInfo;
+  to: UserInfo;
+  timestamp: Date;
+}[];
+
 export type ReceiverInfo = {
   username: string;
   profilePic: string;
 };
+
+export type UserInfo = {
+  userId: ObjectId
+  username: string;
+}
