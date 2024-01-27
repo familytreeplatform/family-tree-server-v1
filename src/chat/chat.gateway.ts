@@ -26,7 +26,9 @@ export class ChatGateway implements OnGatewayConnection {
 
   async handleConnection(socket: Socket) {
     const userId = await this.chat.getUserFromSocket(socket);
-    console.log('USER_ID_FROM_SOCKET', userId);
+    this.logger.log(
+      `chat socket connection detected from user ID: [${userId}] with new socketId [${socket.id}]:::::::::`,
+    );
 
     this.store.set(userId, socket.id);
     console.log('STORE', this.store);
@@ -56,8 +58,14 @@ export class ChatGateway implements OnGatewayConnection {
     console.log('RECEIVER_SOCKET_ID', receiverSocketId);
 
     //store message in DB
+    this.logger.log(`persisting message in DB...`);
     await this.chat.saveMessage(senderId, dto.toId as ObjectId, dto.message);
 
+    this.logger.log(
+      `emitting message ${
+        (JSON.stringify(dto.message), null, 2)
+      } to receiver via socket ID: ${receiverSocketId}`,
+    );
     socket.to(receiverSocketId).emit('send_message', dto.message);
   }
 }

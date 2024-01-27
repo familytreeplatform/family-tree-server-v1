@@ -12,6 +12,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, ObjectId } from 'mongoose';
 import { ConversationSummaryType, ReceiverInfo } from './types';
 import { GetMessagesDto } from './dto';
+import { IResponse } from 'src/interfaces';
 
 @Injectable()
 export class ChatService {
@@ -103,9 +104,24 @@ export class ChatService {
   async getMessages(dto: GetMessagesDto) {
     const skip: number = (dto.pageNo - 1) * dto.pageSize;
 
-    const messages = await this.Message.find({
-      conversation: dto.conversationId,
-    })
+    let queryConditions = [];
+    if (dto.fromId && dto.toId) {
+      queryConditions.push({
+        $or: [
+          { $and: [{ fromId: dto.fromId }, { toId: dto.toId }] },
+          { $and: [{ fromId: dto.toId }, { toId: dto.fromId }] },
+        ],
+      });
+    } else {
+      queryConditions.push({ conversation: dto.conversationId });
+    }
+
+    this.logger.log(
+      'MESSAGES_QUERY_CONDITIONS',
+      JSON.stringify(queryConditions[0], null, 1),
+    );
+
+    const messages = await this.Message.find(queryConditions[0])
       .sort({ timestamp: -1 })
       .skip(skip)
       .limit(dto.pageSize)
@@ -124,16 +140,30 @@ export class ChatService {
     const auth_token: string = socket.handshake.headers.authorization;
 
     if (!auth_token)
-      throw new WsException('session expired, login to continue your chats');
+      return <IResponse>{
+        statusCode: 401,
+        message: 'invalid authorization header, token missing',
+        data: null,
+        error: {
+          code: 'auth_token_missing',
+          message: `authorization token not found in Authorization header`,
+        },
+      };
 
     const split_auth_token = auth_token.split(' ')[1];
 
     if (!split_auth_token)
-      throw new WsException('invalid token, login to request a new one');
+      return <IResponse>{
+        statusCode: 403,
+        message: 'invalid token, login to request a new one',
+        data: null,
+        error: {
+          code: 'invalid_token',
+          message: `invalid authorization token`,
+        },
+      };
 
     const payload = HelperFn.verifyJwtToken(split_auth_token);
-
-    console.log('CHAT_AUTH_TOKEN_VERIFY_DECODE', payload);
 
     return payload.sub;
   }

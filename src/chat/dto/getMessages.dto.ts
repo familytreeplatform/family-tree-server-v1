@@ -1,11 +1,28 @@
 import { ObjectId } from 'mongoose';
-import { IsNotEmpty, IsNumber, IsOptional, Min } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  Min,
+  ValidateIf,
+} from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class GetMessagesDto {
-  @IsNotEmpty()
+  @ValidateIf((o) => !o.toId && !o.fromId)
   @Transform(({ value }) => value as ObjectId)
+  @IsNotEmpty()
   conversationId: ObjectId;
+
+  @ValidateIf((o) => o.toId)
+  @Transform(({ value }) => value as ObjectId)
+  @IsNotEmpty()
+  fromId: ObjectId;
+
+  @ValidateIf((o) => o.fromId)
+  @Transform(({ value }) => value as ObjectId)
+  @IsNotEmpty()
+  toId: ObjectId;
 
   @Transform(({ value }) => parseInt(value))
   @IsNumber()
