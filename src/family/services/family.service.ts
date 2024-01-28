@@ -149,7 +149,7 @@ export class FamilyService {
         { new: true },
       );
 
-      await this.familyWikiModel.findByIdAndUpdate(
+      await this.familyWikiModel.findOneAndUpdate(
         { family: new mongoose.Types.ObjectId(joinFamilyDto.familyId) },
         { $push: { editors: new mongoose.Types.ObjectId(joinFamilyDto.user) } },
         { new: true },
