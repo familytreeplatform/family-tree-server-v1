@@ -139,6 +139,22 @@ export class FamilyService {
         { new: true },
       );
 
+      await this.primaryUserModel.findByIdAndUpdate(
+        { _id: new mongoose.Types.ObjectId(joinFamilyDto.user) },
+        {
+          $push: {
+            families: new mongoose.Types.ObjectId(joinFamilyDto.familyId),
+          },
+        },
+        { new: true },
+      );
+
+      await this.familyWikiModel.findByIdAndUpdate(
+        { family: joinFamilyDto.familyId },
+        { $push: { editors: new mongoose.Types.ObjectId(joinFamilyDto.user) } },
+        { new: true },
+      );
+
       if (
         !zeroToFirstGenerationFamilyRelations.includes(
           joinFamilyDto.relationshipToRoot,
