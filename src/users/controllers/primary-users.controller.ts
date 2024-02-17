@@ -24,8 +24,8 @@ export class PrimaryUserController {
 
   @HttpCode(200)
   @Post('verify-username')
-  async validateUserName(@Body('userName') usernName: string) {
-    if (!usernName)
+  async validateUserName(@Body('userName') userName: string) {
+    if (!userName)
       throw new HttpException(
         {
           message: 'username field is required for verification',
@@ -40,7 +40,7 @@ export class PrimaryUserController {
         400,
       );
     const userNameVerifyResponse =
-      await this.primaryUserService.validateUserName(usernName);
+      await this.primaryUserService.validateUserName(userName);
 
     return formatResponse(userNameVerifyResponse);
   }
@@ -73,13 +73,13 @@ export class PrimaryUserController {
     if (!createPrimaryUserDto.profilePic)
       throw new HttpException(
         {
-          message: 'a valid profile pricture is required',
+          message: 'a valid profile picture is required',
           data: null,
           statusCode: 400,
 
           error: {
-            code: 'missing_profile_pricture',
-            message: `profile picure is required`,
+            code: 'missing_profile_picture',
+            message: `profile picture is required`,
           },
         },
         400,
