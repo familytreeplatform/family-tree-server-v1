@@ -17,6 +17,7 @@ import {
   FamilyTypeUiqueValidateDto,
   JoinFamilyDto,
   LinkToRootDto,
+  MemberSearchDto,
   QueryFamiliesDto,
   SearchFamilyDto,
   UpdateFamilyMemberDto,
@@ -26,6 +27,7 @@ import { GetUser } from 'src/common/decorators';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { formatResponse } from 'src/common/utils';
 import { FamilyRelationshipValidateDto } from '../dto/family-relationship-validate.dto';
+import { ObjectId } from 'mongoose';
 
 @UseGuards(JwtGuard)
 @Controller('family')
@@ -120,6 +122,13 @@ export class FamilyController {
       await this.familyService.queryFamilies(queryFamiliesDto);
 
     return formatResponse(familiesQueryResponse);
+  }
+
+  @HttpCode(200)
+  @Get('member-search')
+  async searchMembers(@Query() memberSearchDto: MemberSearchDto) {
+    const searchMembersResponse = await this.familyService.searchMembers(memberSearchDto)
+    return formatResponse(searchMembersResponse)
   }
 
   @HttpCode(200)
