@@ -388,7 +388,10 @@ export class FamilyService {
   async searchMembers(dto: MemberSearchDto): Promise<IResponse> {
     const memberLink = await this.familyMemberModel
       .find({ family: dto.familyId })
-      .populate('user');
+      .populate({
+        path: 'user',
+        select: '_id fullName profilePic gender'
+      });
     const userArray = [];
     const filteredArray = [];
     const regex = new RegExp(dto.search, 'i');
@@ -398,12 +401,7 @@ export class FamilyService {
     userArray
       .filter((user) => regex.test(user.fullName))
       .map((user) =>
-        filteredArray.push({
-          id: user.id,
-          fullName: user.fullName,
-          profilePic: user.profilePic,
-          gender: user.gender,
-        }),
+        filteredArray.push(user),
       );
 
     return {
