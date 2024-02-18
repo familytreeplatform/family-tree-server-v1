@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import mongoose, { Model, Types } from 'mongoose';
+import mongoose, { Model, ObjectId, Types } from 'mongoose';
 import {
   Family,
   FamilyDocument,
@@ -16,6 +16,7 @@ import {
   FamilyTypeUiqueValidateDto,
   JoinFamilyDto,
   LinkToRootDto,
+  MemberSearchDto,
   QueryFamiliesDto,
   SearchFamilyDto,
   UpdateFamilyMemberDto,
@@ -380,6 +381,34 @@ export class FamilyService {
       message: `relationship is directly related to root, skip parent create`,
       data: true,
     });
+  }
+
+
+  //The code I worked on
+  async searchMembers(dto: MemberSearchDto): Promise<IResponse> {
+    const memberLink = await this.familyMemberModel
+      .find({ family: dto.familyId })
+      .populate({
+        path: 'user',
+        select: '_id fullName profilePic gender'
+      });
+    const userArray = [];
+    const filteredArray = [];
+    const regex = new RegExp(dto.search, 'i');
+
+    memberLink.map((member) => userArray.push(member.user));
+
+    userArray
+      .filter((user) => regex.test(user.fullName))
+      .map((user) =>
+        filteredArray.push(user),
+      );
+
+    return {
+      statusCode: 200,
+      message: `search result successful`,
+      data: filteredArray
+    } 
   }
 
   async searchFamily(searchFamilyDto: SearchFamilyDto) {
