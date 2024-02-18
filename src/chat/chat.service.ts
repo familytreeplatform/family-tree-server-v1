@@ -10,7 +10,7 @@ import {
 } from './schemas';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, ObjectId } from 'mongoose';
-import { ConversationSummaryType, ReceiverInfo } from './types';
+import { ConversationSummaryType, MessageSummaryType, ReceiverInfo } from './types';
 import { GetMessagesDto } from './dto';
 import { IResponse } from 'src/interfaces';
 
@@ -101,7 +101,7 @@ export class ChatService {
     return conversationSummary;
   }
 
-  async getMessages(dto: GetMessagesDto) {
+  async getMessages(dto: GetMessagesDto): Promise<MessageSummaryType> {
     const skip: number = (dto.pageNo - 1) * dto.pageSize;
 
     let queryConditions = [];
@@ -123,6 +123,7 @@ export class ChatService {
 
     const messages = await this.Message.find(queryConditions[0])
       .sort({ timestamp: -1 })
+      .populate('fromId toId')
       .skip(skip)
       .limit(dto.pageSize)
       .exec();
@@ -130,8 +131,14 @@ export class ChatService {
     return messages.map((message) => ({
       messageId: message.id,
       content: message.content,
-      from: message.fromId,
-      to: message.toId,
+      from: {
+        userId: (message.fromId as any).id,
+        username: message.fromId.userName,
+      },
+      to: {
+        userId: (message.toId as any).id,
+        username: message.toId.userName,
+      },
       timestamp: message.timestamp,
     }));
   }
