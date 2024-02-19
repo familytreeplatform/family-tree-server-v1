@@ -11,6 +11,7 @@ import {
 } from '../schemas';
 import { PrimaryUser, PrimaryUserDocument } from 'src/users/schemas';
 import {
+  AddMemberDto,
   CreateFamilyDto,
   CreateFamilyWikiDto,
   FamilyTypeUiqueValidateDto,
@@ -383,14 +384,13 @@ export class FamilyService {
     });
   }
 
-
   //The code I worked on
   async searchMembers(dto: MemberSearchDto): Promise<IResponse> {
     const memberLink = await this.familyMemberModel
       .find({ family: dto.familyId })
       .populate({
         path: 'user',
-        select: '_id fullName profilePic gender'
+        select: '_id fullName profilePic gender',
       });
     const userArray = [];
     const filteredArray = [];
@@ -400,15 +400,61 @@ export class FamilyService {
 
     userArray
       .filter((user) => regex.test(user.fullName))
-      .map((user) =>
-        filteredArray.push(user),
-      );
+      .map((user) => filteredArray.push(user));
 
     return {
       statusCode: 200,
       message: `search result successful`,
-      data: filteredArray
-    } 
+      data: filteredArray,
+    };
+  }
+
+  async addMember(
+    userId: any,
+    familyId: string,
+    dto: AddMemberDto,
+  ): Promise<IResponse> {
+    const { fullName, dob, gender, relationshipToRoot } = dto;
+    const familyExist = await this.familyModel.findById(familyId);
+    if (!familyExist) {
+      return {
+        statusCode: 404,
+        data: null,
+        message: 'Family Not found',
+      };
+    }
+    const addedMember = await this.primaryUserModel.create({
+      fullName,
+      dob,
+      gender,
+      isActive: false,
+      creator: userId as ObjectId,
+      families: [new mongoose.Types.ObjectId(familyId)]
+    });
+
+
+    const userLink = await this.familyMemberModel.create({
+      relationshipToRoot,
+      familyUsername: familyExist.familyUsername,
+      user: addedMember.id,
+      family: familyExist.id,
+    });
+
+    //todo: update editors in family wiki
+
+
+    await this.familyModel.findByIdAndUpdate(
+      familyExist.id,
+      {
+        $push: { members: new mongoose.Types.ObjectId(userLink.id) },
+      },
+      { new: true },
+    );
+
+    return {
+      statusCode: 201,
+      message: 'member added successfully',
+    };
   }
 
   async searchFamily(searchFamilyDto: SearchFamilyDto) {

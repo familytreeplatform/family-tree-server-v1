@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { FamilyService } from '../services';
 import {
+  AddMemberDto,
   CreateFamilyDto,
   FamilyTypeUiqueValidateDto,
   JoinFamilyDto,
@@ -127,8 +128,23 @@ export class FamilyController {
   @HttpCode(200)
   @Get('member-search')
   async searchMembers(@Query() memberSearchDto: MemberSearchDto) {
-    const searchMembersResponse = await this.familyService.searchMembers(memberSearchDto)
-    return formatResponse(searchMembersResponse)
+    const searchMembersResponse =
+      await this.familyService.searchMembers(memberSearchDto);
+    return formatResponse(searchMembersResponse);
+  }
+
+  @Post('member-add/:familyId')
+  async addMember(
+    @GetUser('_id') userId: any,
+    @Param('familyId') familyId: string,
+    @Body() dto: AddMemberDto,
+  ) {
+    const addMemberResponse = await this.familyService.addMember(
+      userId,
+      familyId,
+      dto,
+    );
+    return formatResponse(addMemberResponse);
   }
 
   @HttpCode(200)

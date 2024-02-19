@@ -30,7 +30,7 @@ export class CreatePrimaryUserDto {
   @MinLength(6)
   @Matches(/(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])/, {
     message:
-      'Password must contain atleast one uppercase letter, one lowercase letter and a number',
+      'Password must contain at least one uppercase letter, one lowercase letter and a number',
   })
   password: string;
 

@@ -8,3 +8,4 @@ export * from './update-family-member.dto';
 export * from './get-potential-root-link.dto';
 export * from './create-family-wiki.dto';
 export * from './member-search.dto'
+export * from './addMember.dto'
