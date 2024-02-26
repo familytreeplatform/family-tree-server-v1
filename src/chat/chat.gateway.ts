@@ -49,23 +49,21 @@ export class ChatGateway implements OnGatewayConnection {
     const senderId = (await this.chat.getUserFromSocket(socket)) as ObjectId;
 
     if (!this.store.has(dto.toId)) {
-      this.logger.log(`user with id [${dto.toId}] not found in store`);
-      throw new WsException('user not online...');
-    }
-    const receiverSocketId = this.store.get(dto.toId as ObjectId);
+      const receiverSocketId = this.store.get(dto.toId as ObjectId);
 
-    console.log('SENDER_ID', senderId);
-    console.log('RECEIVER_SOCKET_ID', receiverSocketId);
+      console.log('SENDER_ID', senderId);
+      console.log('RECEIVER_SOCKET_ID', receiverSocketId);
+
+      this.logger.log(
+        `emitting message ${
+          (JSON.stringify(dto.message), null, 2)
+        } to receiver via socket ID: ${receiverSocketId}`,
+      );
+      socket.to(receiverSocketId).emit('send_message', dto.message);
+    } else this.logger.log(`user with id [${dto.toId}] not found in store`);
 
     //store message in DB
     this.logger.log(`persisting message in DB...`);
     await this.chat.saveMessage(senderId, dto.toId as ObjectId, dto.message);
-
-    this.logger.log(
-      `emitting message ${
-        (JSON.stringify(dto.message), null, 2)
-      } to receiver via socket ID: ${receiverSocketId}`,
-    );
-    socket.to(receiverSocketId).emit('send_message', dto.message);
   }
 }
