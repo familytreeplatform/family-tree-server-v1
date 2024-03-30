@@ -49,6 +49,7 @@ export class ChatGateway implements OnGatewayConnection {
     const senderId = (await this.chat.getUserFromSocket(socket)) as ObjectId;
 
     if (!this.store.has(dto.toId)) {
+
       const receiverSocketId = this.store.get(dto.toId as ObjectId);
 
       console.log('SENDER_ID', senderId);
