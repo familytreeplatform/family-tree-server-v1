@@ -2,13 +2,14 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, ObjectId } from 'mongoose';
 import { PrimaryUser } from 'src/users/schemas';
 import { Family } from './create-family.schema';
+import { FamilyRelationshipsEnum } from '../types';
 
 export type FamilyMemberDocument = HydratedDocument<FamilyMember>;
 
 @Schema({ timestamps: true })
 export class FamilyMember {
-  @Prop()
-  relationshipToRoot: string;
+  @Prop({ type: String, enum: FamilyRelationshipsEnum })
+  relationshipToRoot: FamilyRelationshipsEnum;
 
   @Prop()
   familyUsername: string;
