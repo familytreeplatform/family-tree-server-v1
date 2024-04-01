@@ -24,7 +24,14 @@ import {
 import { IResponse } from 'src/interfaces';
 import { generateJoinLink } from 'src/common/utils';
 import { HelperFn } from 'src/common/helpers/helper-fn';
-import { zeroToFirstGenerationFamilyRelations } from '../types';
+import {
+  fifthGeneration,
+  firstGeneration,
+  fourthGeneration,
+  secondGeneration,
+  thirdGeneration,
+  zeroToFirstGenerationFamilyRelations,
+} from '../types';
 import { FamilyRelationshipValidateDto } from '../dto/family-relationship-validate.dto';
 
 @Injectable()
@@ -383,14 +390,87 @@ export class FamilyService {
     });
   }
 
-
   //The code I worked on
+
+  async getFamilyGeneration(familyId: ObjectId) {
+    const familyMembers = await this.familyMemberModel.find({
+      family: familyId,
+    });
+
+    let filter = { gen1: 0, gen2: 0, gen3: 0, gen4: 0, gen5: 0, other: 0 };
+
+    for (const familyMember of familyMembers) {
+      if (firstGeneration.includes(familyMember.relationshipToRoot))
+        filter.gen1 += 1;
+      else if (secondGeneration.includes(familyMember.relationshipToRoot))
+        filter.gen2 += 1;
+      else if (thirdGeneration.includes(familyMember.relationshipToRoot))
+        filter.gen3 += 1;
+      else if (fourthGeneration.includes(familyMember.relationshipToRoot))
+        filter.gen4 += 1;
+      else if (fifthGeneration.includes(familyMember.relationshipToRoot))
+        filter.gen5 += 1;
+      else filter.other += 1;
+    }
+
+    return {
+      statusCode: 200,
+      message: 'Generation filter',
+      data: filter,
+    };
+  }
+
+  async filterMembersByGeneration(familyId: ObjectId, gen: number) {
+    let activeGen = [];
+    switch (gen) {
+      case 1:
+        activeGen = firstGeneration;
+        break;
+      case 2:
+        activeGen = secondGeneration;
+        break;
+      case 3:
+        activeGen = thirdGeneration;
+        break;
+      case 4:
+        activeGen = fourthGeneration;
+        break;
+      case 5:
+        activeGen = fifthGeneration;
+        break;
+      default:
+        activeGen = [];
+        break;
+    }
+
+    const memberLink = await this.familyMemberModel
+      .find({ family: familyId })
+      .populate({
+        path: 'user',
+        select: '_id fullName profilePic gender',
+      });
+
+    const filteredArray = memberLink.filter((user) =>
+      activeGen.includes(user.relationshipToRoot),
+    );
+
+    const userArray = [];
+
+    filteredArray.map((member) => userArray.push(member.user));
+
+    return {
+      statusCode: 200,
+      message: `Members from gen ${gen}`,
+      data: userArray,
+    };
+  }
+
   async searchMembers(dto: MemberSearchDto): Promise<IResponse> {
     const memberLink = await this.familyMemberModel
       .find({ family: dto.familyId })
       .populate({
         path: 'user',
-        select: '_id fullName profilePic gender'
+        select: '_id fullName profilePic gender',
       });
     const userArray = [];
     const filteredArray = [];
@@ -400,15 +480,13 @@ export class FamilyService {
 
     userArray
       .filter((user) => regex.test(user.fullName))
-      .map((user) =>
-        filteredArray.push(user),
-      );
+      .map((user) => filteredArray.push(user));
 
     return {
       statusCode: 200,
       message: `search result successful`,
-      data: filteredArray
-    } 
+      data: filteredArray,
+    };
   }
 
   async searchFamily(searchFamilyDto: SearchFamilyDto) {

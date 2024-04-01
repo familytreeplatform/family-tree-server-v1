@@ -127,8 +127,9 @@ export class FamilyController {
   @HttpCode(200)
   @Get('member-search')
   async searchMembers(@Query() memberSearchDto: MemberSearchDto) {
-    const searchMembersResponse = await this.familyService.searchMembers(memberSearchDto)
-    return formatResponse(searchMembersResponse)
+    const searchMembersResponse =
+      await this.familyService.searchMembers(memberSearchDto);
+    return formatResponse(searchMembersResponse);
   }
 
   @HttpCode(200)
@@ -159,5 +160,18 @@ export class FamilyController {
       });
 
     return formatResponse(potentialRootLinkResponse);
+  }
+
+  @Get('gen/:id')
+  getFamilyGeneration(@Param('id') familyId: ObjectId) {
+    return this.familyService.getFamilyGeneration(familyId);
+  }
+
+  @Get('generation-filter/:id')
+  filterMembersByGen(
+    @Param('id') familyId: ObjectId,
+    @Query('gen') gen: number,
+  ) {
+    return this.familyService.filterMembersByGeneration(familyId, gen);
   }
 }
