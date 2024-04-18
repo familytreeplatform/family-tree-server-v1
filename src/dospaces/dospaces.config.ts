@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 require('aws-sdk/lib/maintenance_mode_message').suppress = true;
 
 import * as AWS from 'aws-sdk';

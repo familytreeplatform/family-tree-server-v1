@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model, ObjectId, Types } from 'mongoose';
@@ -397,7 +398,7 @@ export class FamilyService {
       family: familyId,
     });
 
-    let filter = { gen1: 0, gen2: 0, gen3: 0, gen4: 0, gen5: 0, other: 0 };
+    const filter = { gen1: 0, gen2: 0, gen3: 0, gen4: 0, gen5: 0, other: 0 };
 
     for (const familyMember of familyMembers) {
       if (firstGeneration.includes(familyMember.relationshipToRoot))
@@ -463,6 +464,67 @@ export class FamilyService {
       message: `Members from gen ${gen}`,
       data: userArray,
     };
+  }
+
+  // Filter by generations
+  async getFamilyMembersByGeneration(
+    familyId: any,
+    batchSize: number = 100,
+  ): Promise<any> {
+    const membersByGeneration: { [generation: number]: FamilyMember[] } = {};
+    let currentPage = 0;
+
+    while (true) {
+      const familyMembers = await this.familyMemberModel
+        .find({ family_id: familyId })
+        .skip(currentPage * batchSize)
+        .limit(batchSize)
+        .exec();
+
+      if (familyMembers.length === 0) {
+        break; // No more members to process
+      }
+
+      familyMembers.forEach(async (member) => {
+        const generation = await this.computeGeneration(member);
+        if (!membersByGeneration[generation]) {
+          membersByGeneration[generation] = [];
+        }
+        membersByGeneration[generation].push(member);
+      });
+
+      currentPage++;
+    }
+
+    return {
+      statusCode: 200,
+      message: `Members filter by generation`,
+      data: membersByGeneration,
+    };
+  }
+
+  // computing generations
+  private async computeGeneration(member: any): Promise<number> {
+    // Define a recursive function to traverse the family tree upwards until reaching the root member
+    const findRootAncestor = async (
+      currentMemberId: string,
+      currentGeneration: number,
+    ): Promise<number> => {
+      // Fetch the parent of the current member
+      const parent = await this.familyMemberModel
+        .findOne({ _id: currentMemberId })
+        .exec();
+      if (!parent || !parent.parent?._id) {
+        // If the current member has no parent, it is the root member
+        return currentGeneration;
+      }
+      // Recursively traverse upwards to the parent
+      return findRootAncestor(parent.parent?._id, currentGeneration + 1);
+    };
+
+    // Call the recursive function to find the root ancestor of the member
+    const rootGeneration = await findRootAncestor(member._id, 1);
+    return rootGeneration;
   }
 
   async searchMembers(dto: MemberSearchDto): Promise<IResponse> {

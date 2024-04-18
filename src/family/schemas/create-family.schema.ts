@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Schema as MongooseSchema } from 'mongoose';
+import { HydratedDocument, Schema as MongooseSchema, ObjectId } from 'mongoose';
 import { PrimaryUser } from 'src/users/schemas';
 import { FamilyMember, FamilyWiki } from '.';
 
@@ -7,6 +8,9 @@ export type FamilyDocument = HydratedDocument<Family>;
 
 @Schema({ timestamps: true })
 export class Family {
+  @Prop({ type: 'ObjectId' })
+  _id: any;
+
   @Prop({ type: 'ObjectId', ref: 'PrimaryUser', required: true }) // Reference to the User collection
   creator: PrimaryUser; // Link the family creator to a User
 

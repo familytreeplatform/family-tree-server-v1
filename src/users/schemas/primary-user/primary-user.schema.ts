@@ -8,6 +8,9 @@ export type PrimaryUserDocument = HydratedDocument<PrimaryUser>;
 
 @Schema({ strict: false, timestamps: true })
 export class PrimaryUser {
+  @Prop({ type: 'ObjectId' })
+  _id: any;
+
   @Prop({ type: 'ObjectId', ref: 'Family' }) // Reference to the Family collection
   familyRootedTo: Family; // If user is being made root link the User to the Family
 

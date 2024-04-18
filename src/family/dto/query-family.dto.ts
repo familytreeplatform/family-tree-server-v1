@@ -17,3 +17,4 @@ export class QueryFamiliesDto {
   @IsString()
   tribe: string;
 }
+// familyName, location

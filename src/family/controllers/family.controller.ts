@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   Body,
   Controller,
@@ -7,9 +8,9 @@ import {
   Param,
   Post,
   Query,
-  UploadedFile,
+  // UploadedFile,
   UseGuards,
-  UseInterceptors,
+  // UseInterceptors,
 } from '@nestjs/common';
 import { FamilyService } from '../services';
 import {
@@ -24,7 +25,7 @@ import {
 } from '../dto';
 import { JwtGuard } from 'src/common/guards';
 import { GetUser } from 'src/common/decorators';
-import { FileInterceptor } from '@nestjs/platform-express';
+// import { FileInterceptor } from '@nestjs/platform-express';
 import { formatResponse } from 'src/common/utils';
 import { FamilyRelationshipValidateDto } from '../dto/family-relationship-validate.dto';
 import { ObjectId } from 'mongoose';
@@ -173,5 +174,13 @@ export class FamilyController {
     @Query('gen') gen: number,
   ) {
     return this.familyService.filterMembersByGeneration(familyId, gen);
+  }
+
+  @Get('family-members-generation-filter')
+  filterFamilyMembersbyGeneration(
+    @Param('id') familyId: ObjectId,
+    @Query('gen') gen: number,
+  ) {
+    return this.familyService.getFamilyMembersByGeneration(familyId, 100);
   }
 }

@@ -15,6 +15,14 @@ export enum FamilyRelationshipsEnum {
   Greatgreatgranddaughter = 'greatgreatgranddaughter',
 }
 
+export enum FamilyRelationshipType {
+  MARRIAGE = 'marriage',
+  ALLIANCE = 'alliance',
+  AFFILIATION = 'affiliation',
+  DIRECT = 'direct',
+  OTHER = 'other',
+}
+
 export enum FamilyTypeEnum {
   Paternal = 'paternal',
   Maternal = 'maternal',
