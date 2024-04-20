@@ -7,8 +7,8 @@ export class searchUserDto {
   @IsString()
   searchText: string;
 
-  // @Transform(({ value }) => value as ObjectId)
-  // @IsOptional()
-  // @IsString()
-  // familyId: ObjectId;
+  @Transform(({ value }) => value as ObjectId)
+  @IsOptional()
+  @IsString()
+  familyId: ObjectId;
 }

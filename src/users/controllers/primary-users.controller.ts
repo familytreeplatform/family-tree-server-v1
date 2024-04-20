@@ -17,7 +17,9 @@ import {
 import { formatResponse } from 'src/common/utils/response-formatter';
 import { JwtGuard } from 'src/common/guards';
 import { GetUser } from 'src/common/decorators';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('User')
 @Controller('user/primary')
 export class PrimaryUserController {
   constructor(private readonly primaryUserService: PrimaryUserService) {}

@@ -10,7 +10,9 @@ import { AuthService } from './auth.service';
 import { DefaultSignInDto, ForgotPasswordDto, PasswordResetDto } from './dto';
 import { formatResponse } from 'src/common/utils/response-formatter';
 import { Throttle } from '@nestjs/throttler';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Auth')
 @Throttle({ default: { limit: 3, ttl: 60000 } })
 @Controller('auth')
 export class AuthController {

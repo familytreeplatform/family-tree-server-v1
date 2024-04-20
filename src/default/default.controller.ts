@@ -15,7 +15,9 @@ import { UpdateUserGlobalSettings, UploadFileTypeDto } from './dto';
 import { Types } from 'mongoose';
 import { GetUser } from 'src/common/decorators';
 import { JwtGuard } from 'src/common/guards';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Default')
 @Controller('default')
 export class DefaultController {
   constructor(private readonly defaultService: DefaultService) {}
