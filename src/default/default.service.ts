@@ -5,6 +5,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { IResponse } from 'src/interfaces';
 import { GlobalSettings, GlobalSettingsDocument } from './schemas';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
 @Injectable()
 export class DefaultService {
@@ -13,13 +14,15 @@ export class DefaultService {
     private readonly doSpacesService: DospacesService,
     @InjectModel(GlobalSettings.name)
     private globalSettingsModel: Model<GlobalSettingsDocument>,
+    private readonly cloudinary: CloudinaryService,
   ) {}
 
   async uploadFile(
     file: Express.Multer.File,
     folderName?: string,
   ): Promise<string> {
-    return await this.doSpacesService.uploadFile(file, `${folderName + 's'}`);
+    // return await this.doSpacesService.uploadFile(file, `${folderName + 's'}`);
+    return await this.cloudinary.upload(file)
   }
 
   async updateGlobalSettings(dto: UpdateUserGlobalSettings) {

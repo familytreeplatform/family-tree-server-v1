@@ -23,6 +23,7 @@ import { DospacesModule } from './dospaces/dospaces.module';
 import { SentryInterceptor } from './common/interceptors/sentry.interceptor';
 import { DefaultModule } from './default/default.module';
 import { GlobalSettings, GlobalSettingsSchema } from './default/schemas';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { GlobalSettings, GlobalSettingsSchema } from './default/schemas';
     ChatModule,
     DospacesModule,
     DefaultModule,
+    CloudinaryModule,
   ],
   controllers: [AppController, PrimaryUserController],
   providers: [

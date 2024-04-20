@@ -153,11 +153,23 @@ export class PrimaryUserService {
 
   async searchUser(searchUserDto: searchUserDto) {
     const { searchText } = searchUserDto;
+    let queryCondition: any;
+
+    if (searchUserDto.familyId) {
+      queryCondition = {
+        $and: [
+          { families: { $eq: { $in: searchUserDto.familyId }  } },
+          { $or: [{ email: searchText }, { userName: searchText }] },
+        ],
+      };
+    } else {
+      queryCondition = {
+        $or: [{ email: searchText }, { userName: searchText }],
+      };
+    }
 
     try {
-      const user = await this.primaryUserModel.find({
-        $or: [{ email: searchText }, { userName: searchText }],
-      });
+      const user = await this.primaryUserModel.find(queryCondition);
 
       if (user.length === 0) {
         return <IResponse>{

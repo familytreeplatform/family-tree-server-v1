@@ -29,7 +29,9 @@ import { GetUser } from 'src/common/decorators';
 import { formatResponse } from 'src/common/utils';
 import { FamilyRelationshipValidateDto } from '../dto/family-relationship-validate.dto';
 import { ObjectId } from 'mongoose';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Family')
 @UseGuards(JwtGuard)
 @Controller('family')
 export class FamilyController {
