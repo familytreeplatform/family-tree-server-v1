@@ -511,7 +511,7 @@ export class FamilyService {
       currentGeneration: number,
     ): Promise<number> => {
       // Fetch the parent of the current member
-      const parent = await this.familyMemberModel
+      const parent: any = await this.familyMemberModel
         .findOne({ _id: currentMemberId })
         .exec();
       if (!parent || !parent.parent?._id) {
