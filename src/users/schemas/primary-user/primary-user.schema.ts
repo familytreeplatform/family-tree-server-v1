@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Schema as MongooseSchema } from 'mongoose';
 import { Family } from 'src/family/schemas';
@@ -8,8 +9,8 @@ export type PrimaryUserDocument = HydratedDocument<PrimaryUser>;
 
 @Schema({ strict: false, timestamps: true })
 export class PrimaryUser {
-  @Prop({ type: 'ObjectId', ref: 'Family' }) // Reference to the Family collection
-  familyRootedTo: Family; // If user is being made root link the User to the Family
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Family' }) // Reference to the Family collection
+  familyRootedTo: MongooseSchema.Types.ObjectId; // If user is being made root link the User to the Family
 
   @Prop({ unique: true, sparse: true })
   email: string;
@@ -41,17 +42,17 @@ export class PrimaryUser {
   @Prop({ ref: 'Family' })
   families: Family[];
 
-  @Prop({ type: 'ObjectId', ref: 'PrimaryUser' })
-  creator?: PrimaryUser;
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'PrimaryUser' })
+  creator?: MongooseSchema.Types.ObjectId;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'PrimaryUserWiki' })
-  wiki: PrimaryUserWiki;
+  wiki: MongooseSchema.Types.ObjectId;
 
   @Prop({
     type: MongooseSchema.Types.ObjectId,
     ref: 'PrimaryUseGlobalSettings',
   })
-  globalSettings: GlobalSettings;
+  globalSettings: MongooseSchema.Types.ObjectId;
 
   @Prop({ default: false })
   deleted: boolean;

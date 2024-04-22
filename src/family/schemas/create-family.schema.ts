@@ -8,14 +8,19 @@ export type FamilyDocument = HydratedDocument<Family>;
 
 @Schema({ timestamps: true })
 export class Family {
-  @Prop({ type: 'ObjectId' })
-  _id?: any;
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'PrimaryUser',
+    required: true,
+  }) // Reference to the User collection
+  creator: MongooseSchema.Types.ObjectId; // Link the family creator to a User
 
-  @Prop({ type: 'ObjectId', ref: 'PrimaryUser', required: true }) // Reference to the User collection
-  creator: PrimaryUser; // Link the family creator to a User
-
-  @Prop({ type: 'ObjectId', ref: 'PrimaryUser', required: true }) // Reference to the User collection
-  root: PrimaryUser; // Link the root to a User
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'PrimaryUser',
+    required: true,
+  }) // Reference to the User collection
+  root: MongooseSchema.Types.ObjectId; // Link the root to a User
 
   @Prop({ required: true })
   familyName: string;
@@ -42,16 +47,16 @@ export class Family {
   familyJoinLink: string;
 
   @Prop({ ref: Family.name })
-  branches: Family[];
+  branches: MongooseSchema.Types.ObjectId[];
 
   @Prop({ ref: 'FamilyMember' })
-  members: FamilyMember[];
+  members: MongooseSchema.Types.ObjectId[];
 
   @Prop({ type: Number })
   membersCount: number;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'FamilyWiki' })
-  wiki: FamilyWiki;
+  wiki: MongooseSchema.Types.ObjectId;
 }
 
 export const FamilySchema = SchemaFactory.createForClass(Family);

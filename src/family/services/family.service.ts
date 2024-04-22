@@ -966,7 +966,7 @@ export class FamilyService {
       this.logger.log(
         `validating user selected as root isn't already root on another family...`,
       );
-      const isSelectedRootAlreadyRooted = await this.primaryUserModel
+      const isSelectedRootAlreadyRooted: any = await this.primaryUserModel
         .findOne({ _id: createFamilyDto.root, role: 'root' })
         .populate({
           path: 'familyRootedTo',
@@ -979,10 +979,10 @@ export class FamilyService {
       ) {
         return <IResponse>{
           statusCode: 400,
-          message: `user selectd as root is already a root in ${isSelectedRootAlreadyRooted.familyRootedTo?.familyName} family, consider joining the family instead`,
+          message: `user selectd as root is already a root in ${isSelectedRootAlreadyRooted?.familyRootedTo?.familyName} family, consider joining the family instead`,
           data: {
             familyUserName:
-              isSelectedRootAlreadyRooted.familyRootedTo.familyUsername,
+              isSelectedRootAlreadyRooted?.familyRootedTo?.familyUsername,
           },
           error: null,
         };
