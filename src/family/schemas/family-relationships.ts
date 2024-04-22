@@ -9,7 +9,7 @@ export type FamilyRelationshipDocument = HydratedDocument<FamilyRelationship>;
 @Schema({ timestamps: true })
 export class FamilyRelationship {
   @Prop({ type: 'ObjectId' })
-  _id: any;
+  _id?: any;
 
   @Prop({ type: 'ObjectId', ref: 'Family', required: true })
   family1: Family;

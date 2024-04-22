@@ -9,7 +9,7 @@ export type FamilyDocument = HydratedDocument<Family>;
 @Schema({ timestamps: true })
 export class Family {
   @Prop({ type: 'ObjectId' })
-  _id: any;
+  _id?: any;
 
   @Prop({ type: 'ObjectId', ref: 'PrimaryUser', required: true }) // Reference to the User collection
   creator: PrimaryUser; // Link the family creator to a User
