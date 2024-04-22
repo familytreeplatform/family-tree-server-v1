@@ -8,8 +8,8 @@ export type FamilyWikiDocument = HydratedDocument<FamilyWiki>;
 
 @Schema({ timestamps: true })
 export class FamilyWiki {
-  @Prop({ type: 'ObjectId' })
-  _id?: any;
+  // @Prop({ type: 'ObjectId' })
+  // _id?: any;
 
   @Prop({ type: 'ObjectId', ref: 'Family', required: true })
   family: Family;
