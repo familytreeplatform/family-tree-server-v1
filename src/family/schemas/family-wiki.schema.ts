@@ -11,14 +11,14 @@ export class FamilyWiki {
   // @Prop({ type: 'ObjectId' })
   // _id?: any;
 
-  @Prop({ type: 'ObjectId', ref: 'Family', required: true })
-  family: Family;
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Family', required: true })
+  family: MongooseSchema.Types.ObjectId;
 
   @Prop()
   wiki: string;
 
-  @Prop({ ref: 'PrimaryUser' })
-  editors: PrimaryUser[];
+  @Prop({ ref: MongooseSchema.Types.ObjectId })
+  editors: MongooseSchema.Types.ObjectId[];
 }
 
 export const FamilyWikiSchema = SchemaFactory.createForClass(FamilyWiki);
