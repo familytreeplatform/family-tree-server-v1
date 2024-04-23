@@ -321,7 +321,7 @@ export class FamilyService {
       `validating user doesn't already belong to a family of same type [MATERNAL or PATERNAL]`,
     );
     try {
-      const userFamilyTypeUnique = await this.familyMemberModel
+      const userFamilyTypeUnique: any = await this.familyMemberModel
         .findOne({
           user: familyTypeUiqueValidateDto.userId,
           familyType: {
@@ -478,6 +478,11 @@ export class FamilyService {
       const familyMembers = await this.familyMemberModel
         .find({ family_id: familyId })
         .skip(currentPage * batchSize)
+        .populate([
+          { path: 'user', select: '-password' },
+          { path: 'parent', select: '-password' },
+          { path: 'family', select: '-password' },
+        ])
         .limit(batchSize)
         .exec();
 
@@ -486,6 +491,7 @@ export class FamilyService {
       }
 
       familyMembers.forEach(async (member) => {
+        console.log(member);
         const generation = await this.computeGeneration(member);
         if (!membersByGeneration[generation]) {
           membersByGeneration[generation] = [];

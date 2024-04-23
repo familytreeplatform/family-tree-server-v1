@@ -169,7 +169,7 @@ export class AuthService {
     const { otp, password } = passwordResetDto;
 
     try {
-      let userWithOtp = await this.primaryUser
+      const userWithOtp = await this.primaryUser
         .findOne({
           secretToken: otp,
         })

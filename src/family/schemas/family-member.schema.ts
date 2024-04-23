@@ -1,16 +1,12 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Schema as MongooseSchema } from 'mongoose';
 // import { PrimaryUser } from 'src/users/schemas';
-import { Family } from './create-family.schema';
 import { FamilyRelationshipsEnum } from '../types';
 
 export type FamilyMemberDocument = HydratedDocument<FamilyMember>;
 
 @Schema({ timestamps: true })
 export class FamilyMember {
-  // @Prop({ type: 'ObjectId' })
-  // _id?: any;
-
   @Prop({ type: String, enum: FamilyRelationshipsEnum })
   relationshipToRoot: FamilyRelationshipsEnum;
 
@@ -20,8 +16,8 @@ export class FamilyMember {
   @Prop()
   familyType: string;
 
-  @Prop({ type: 'ObjectId', ref: 'Family' })
-  family: Family;
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Family' })
+  family: MongooseSchema.Types.ObjectId;
 
   @Prop({
     type: MongooseSchema.Types.ObjectId,

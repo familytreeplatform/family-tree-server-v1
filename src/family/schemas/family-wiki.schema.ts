@@ -8,16 +8,13 @@ export type FamilyWikiDocument = HydratedDocument<FamilyWiki>;
 
 @Schema({ timestamps: true })
 export class FamilyWiki {
-  // @Prop({ type: 'ObjectId' })
-  // _id?: any;
-
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Family', required: true })
   family: MongooseSchema.Types.ObjectId;
 
   @Prop()
   wiki: string;
 
-  @Prop({ ref: MongooseSchema.Types.ObjectId })
+  @Prop({ ref: 'PrimaryUser' })
   editors: MongooseSchema.Types.ObjectId[];
 }
 
